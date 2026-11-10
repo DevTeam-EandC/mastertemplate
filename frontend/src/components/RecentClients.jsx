@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Search, X } from "lucide-react";
 import Status from "./ui/Status";
 import { STATUSES } from "../data/constants";
 
@@ -10,22 +10,11 @@ const monthKey = (c) => {
 const monthLabel = (key) =>
     new Date(`${key}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-// One entry per filter dropdown. `key` is the field on the saved client record.
+// Month is the only dropdown filter retained in Recent Clients.
 const MONTH_FILTER = { key: "month", label: "Month", get: monthKey, format: monthLabel, newestFirst: true };
-const DETAIL_FILTERS = [
-    { key: "building_type", label: "Building type" },
-    { key: "project_type", label: "Project type" },
-    { key: "elevator_category", label: "Elevator category" },
-    { key: "officer", label: "Sales officer" },
-    { key: "source", label: "Lead source" },
-    { key: "unit_type", label: "Unit type" },
-    { key: "quotation_purpose", label: "Quotation purpose" },
-    { key: "project_location", label: "Project location" },
-];
-const ALL_FILTERS = [MONTH_FILTER, ...DETAIL_FILTERS];
 
 const valueOf = (c, f) => (f.get ? f.get(c) : c[f.key]) || "";
-const initialFilters = () => Object.fromEntries(ALL_FILTERS.map((f) => [f.key, "all"]));
+const initialFilters = () => ({ month: "all" });
 const dash = (v) => (v ? v : "—");
 
 function FilterSelect({ filter, value, options, onChange }) {
@@ -48,31 +37,20 @@ function FilterSelect({ filter, value, options, onChange }) {
 
 export default function RecentClients({ clients, onViewAll }) {
     const [query, setQuery] = useState("");
-    const [clientName, setClientName] = useState("");
     const [filters, setFilters] = useState(initialFilters);
-    const [statusSel, setStatusSel] = useState(STATUSES);
-    const [showFilters, setShowFilters] = useState(false);
+    const [statusSel, setStatusSel] = useState([]);
     const [visible, setVisible] = useState(10);
 
     const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
 
-    // Dropdown options come from the data, so they always match what exists.
-    const options = useMemo(
-        () =>
-            Object.fromEntries(
-                ALL_FILTERS.map((f) => {
-                    const vals = [...new Set(clients.map((c) => valueOf(c, f)).filter(Boolean))].sort();
-                    if (f.newestFirst) vals.reverse();
-                    return [f.key, vals];
-                })
-            ),
-        [clients]
-    );
-    const names = useMemo(() => [...new Set(clients.map((c) => c.name))].sort(), [clients]);
+    // Month options come from the data, so they always match existing records.
+    const monthOptions = useMemo(() => {
+        const values = [...new Set(clients.map((c) => valueOf(c, MONTH_FILTER)).filter(Boolean))].sort();
+        return values.reverse();
+    }, [clients]);
 
     const q = query.trim().toLowerCase();
     const isDigits = /^\d{1,3}$/.test(q); // 1-3 digits = match the end of the project code
-    const cn = clientName.trim().toLowerCase();
 
     // Everything except the status tab, so each tab can show its own count.
     const base = clients.filter((c) => {
@@ -83,14 +61,15 @@ export default function RecentClients({ clients, onViewAll }) {
             (isDigits ? code.endsWith(q) : code.includes(q)) ||
             c.name.toLowerCase().includes(q) ||
             projectName.includes(q);
-        const matchesName = !cn || c.name.toLowerCase().includes(cn);
-        const matchesFilters = ALL_FILTERS.every((f) => filters[f.key] === "all" || valueOf(c, f) === filters[f.key]);
-        return matchesSearch && matchesName && matchesFilters;
+        const matchesMonth = filters.month === "all" || valueOf(c, MONTH_FILTER) === filters.month;
+        return matchesSearch && matchesMonth;
     });
 
     const countFor = (s) => base.filter((c) => c.status === s).length;
     const allChecked = statusSel.length === STATUSES.length;
-    const rows = allChecked ? base : base.filter((c) => statusSel.includes(c.status));
+    // No status boxes selected means show the complete matching client list.
+    // Once one or more statuses are selected, show only those statuses.
+    const rows = statusSel.length === 0 ? base : base.filter((c) => statusSel.includes(c.status));
 
     const toggleStatus = (s) => {
         setStatusSel((sel) => (sel.includes(s) ? sel.filter((x) => x !== s) : [...sel, s]));
@@ -101,15 +80,12 @@ export default function RecentClients({ clients, onViewAll }) {
         setVisible(10);
     };
 
-    const activeFilters = ALL_FILTERS.filter((f) => filters[f.key] !== "all").length + (cn ? 1 : 0);
-    const detailFilterCount = DETAIL_FILTERS.filter((f) => filters[f.key] !== "all").length + (cn ? 1 : 0);
-    const anyActive = activeFilters > 0 || q || !allChecked;
+    const anyActive = filters.month !== "all" || q || statusSel.length > 0;
 
     const clearAll = () => {
         setQuery("");
-        setClientName("");
         setFilters(initialFilters());
-        setStatusSel(STATUSES);
+        setStatusSel([]);
         setVisible(10);
     };
 
@@ -127,7 +103,7 @@ export default function RecentClients({ clients, onViewAll }) {
             </div>
 
             <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-soft">
-                {/* Header: title, month filter, more-filters toggle */}
+                {/* Header: title and month filter */}
                 <div className="flex flex-col justify-between gap-3 p-5 lg:flex-row lg:items-end">
                     <div>
                         <h3 className="text-sm font-semibold text-brand-ink">Recent clients</h3>
@@ -140,19 +116,10 @@ export default function RecentClients({ clients, onViewAll }) {
                             <FilterSelect
                                 filter={MONTH_FILTER}
                                 value={filters.month}
-                                options={options.month}
-                                onChange={(v) => setFilter("month", v)}
+                                options={monthOptions}
+                                onChange={(v) => { setFilter("month", v); setVisible(10); }}
                             />
                         </div>
-                        <button
-                            onClick={() => setShowFilters((s) => !s)}
-                            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${showFilters || detailFilterCount ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-600"}`}
-                        >
-                            <SlidersHorizontal size={14} /> More filters
-                            {detailFilterCount > 0 && (
-                                <span className="rounded-full bg-brand-blue px-1.5 py-0.5 text-[10px] text-white">{detailFilterCount}</span>
-                            )}
-                        </button>
                         {anyActive && (
                             <button onClick={clearAll} className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-brand-blue">
                                 <X size={14} /> Clear all
@@ -161,35 +128,7 @@ export default function RecentClients({ clients, onViewAll }) {
                     </div>
                 </div>
 
-                {/* Client name + project detail filters */}
-                {showFilters && (
-                    <div className="grid gap-3 border-t border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2 lg:grid-cols-4">
-                        <label className="block min-w-0">
-                            <span className="mb-1 block text-[11px] font-semibold text-slate-500">Client name</span>
-                            <input
-                                list="recent-client-names"
-                                value={clientName}
-                                onChange={(e) => { setClientName(e.target.value); setVisible(10); }}
-                                placeholder="Type or pick a client"
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-brand-steel"
-                            />
-                            <datalist id="recent-client-names">
-                                {names.map((n) => <option key={n} value={n} />)}
-                            </datalist>
-                        </label>
-                        {DETAIL_FILTERS.map((f) => (
-                            <FilterSelect
-                                key={f.key}
-                                filter={f}
-                                value={filters[f.key]}
-                                options={options[f.key]}
-                                onChange={(v) => { setFilter(f.key, v); setVisible(10); }}
-                            />
-                        ))}
-                    </div>
-                )}
 
-          
                 {/* Status checkboxes */}
                 <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
                     <span className="mr-1 text-[11px] font-semibold text-slate-500">Show</span>
