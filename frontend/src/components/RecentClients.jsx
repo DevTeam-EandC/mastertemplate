@@ -50,7 +50,7 @@ export default function RecentClients({ clients, onViewAll }) {
     const [query, setQuery] = useState("");
     const [clientName, setClientName] = useState("");
     const [filters, setFilters] = useState(initialFilters);
-    const [tab, setTab] = useState("All");
+    const [statusSel, setStatusSel] = useState(STATUSES);
     const [showFilters, setShowFilters] = useState(false);
     const [visible, setVisible] = useState(10);
 
@@ -88,19 +88,28 @@ export default function RecentClients({ clients, onViewAll }) {
         return matchesSearch && matchesName && matchesFilters;
     });
 
-    const tabs = ["All", ...STATUSES];
-    const countFor = (t) => (t === "All" ? base.length : base.filter((c) => c.status === t).length);
-    const rows = tab === "All" ? base : base.filter((c) => c.status === tab);
+    const countFor = (s) => base.filter((c) => c.status === s).length;
+    const allChecked = statusSel.length === STATUSES.length;
+    const rows = allChecked ? base : base.filter((c) => statusSel.includes(c.status));
+
+    const toggleStatus = (s) => {
+        setStatusSel((sel) => (sel.includes(s) ? sel.filter((x) => x !== s) : [...sel, s]));
+        setVisible(10);
+    };
+    const toggleAll = () => {
+        setStatusSel(allChecked ? [] : STATUSES);
+        setVisible(10);
+    };
 
     const activeFilters = ALL_FILTERS.filter((f) => filters[f.key] !== "all").length + (cn ? 1 : 0);
     const detailFilterCount = DETAIL_FILTERS.filter((f) => filters[f.key] !== "all").length + (cn ? 1 : 0);
-    const anyActive = activeFilters > 0 || q || tab !== "All";
+    const anyActive = activeFilters > 0 || q || !allChecked;
 
     const clearAll = () => {
         setQuery("");
         setClientName("");
         setFilters(initialFilters());
-        setTab("All");
+        setStatusSel(STATUSES);
         setVisible(10);
     };
 
@@ -180,20 +189,30 @@ export default function RecentClients({ clients, onViewAll }) {
                     </div>
                 )}
 
-                {/* Status tabs */}
-                <div className="flex gap-1 overflow-x-auto border-t border-slate-100 px-3">
-                    {tabs.map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => { setTab(t); setVisible(10); }}
-                            className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-semibold transition ${tab === t ? "border-brand-blue text-brand-blue" : "border-transparent text-slate-500 hover:text-brand-ink"}`}
-                        >
-                            {t}
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] ${tab === t ? "bg-brand-mist text-brand-blue" : "bg-slate-100 text-slate-500"}`}>
-                                {countFor(t)}
-                            </span>
-                        </button>
-                    ))}
+          
+                {/* Status checkboxes */}
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
+                    <span className="mr-1 text-[11px] font-semibold text-slate-500">Show</span>
+
+                    <label className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${allChecked ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-500"}`}>
+                        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="accent-brand-blue" />
+                        All
+                        <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] text-slate-500">{base.length}</span>
+                    </label>
+
+                    {STATUSES.map((s) => {
+                        const checked = statusSel.includes(s);
+                        return (
+                            <label
+                                key={s}
+                                className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${checked ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-500"}`}
+                            >
+                                <input type="checkbox" checked={checked} onChange={() => toggleStatus(s)} className="accent-brand-blue" />
+                                {s}
+                                <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] text-slate-500">{countFor(s)}</span>
+                            </label>
+                        );
+                    })}
                 </div>
 
                 {/* Table */}
