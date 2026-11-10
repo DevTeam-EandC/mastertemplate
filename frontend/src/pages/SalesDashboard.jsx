@@ -11,8 +11,8 @@ export default function SalesDashboard() {
 
     const stats = [
         { label: "Total clients", value: clients.length, delta: "+12.8%", icon: Users, tone: "bg-blue-50 text-brand-blue" },
-        { label: "For quotation", value: count("For quotation"), delta: "Needs follow-up", icon: ClipboardList, tone: "bg-slate-100 text-slate-600" },
-        { label: "In progress", value: count("In progress"), delta: "Active projects", icon: Activity, tone: "bg-violet-50 text-violet-600" },
+        { label: "For reference", value: count("For reference"), delta: "Needs follow-up", icon: ClipboardList, tone: "bg-slate-100 text-slate-600" },
+        { label: "For site inspection", value: count("For site inspection"), delta: "Active projects", icon: Activity, tone: "bg-violet-50 text-violet-600" },
         { label: "Completed", value: count("Completed"), delta: "Successfully closed", icon: CheckCircle2, tone: "bg-emerald-50 text-emerald-600" },
     ];
 
@@ -24,17 +24,59 @@ export default function SalesDashboard() {
     ];
 
     return (
-        <div className="space-y-7">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-                <div>
-                    <div className="text-xs font-medium text-slate-400">Monday, November 9, 2026</div>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight text-brand-ink">Good afternoon<span className="text-brand-blue">.</span></h2>
-                    <p className="mt-1 text-sm text-slate-500">Here’s what’s happening with your sales pipeline.</p>
+        
+            <div className="space-y-7">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                    <div>
+                        <div className="text-xs font-medium text-slate-400">
+                            {new Date().toLocaleDateString("en-PH", {
+                                weekday: "long",
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                                timeZone: "Asia/Manila",
+                            })}
+                            {" · "}
+                            {new Date().toLocaleTimeString("en-PH", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                                hour12: true,
+                                timeZone: "Asia/Manila",
+                            })}
+                        </div>
+
+                        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-brand-ink">
+                            {(() => {
+                                const hour = Number(
+                                    new Intl.DateTimeFormat("en-PH", {
+                                        hour: "numeric",
+                                        hour12: false,
+                                        timeZone: "Asia/Manila",
+                                    }).format(new Date())
+                                );
+
+                                return hour < 12
+                                    ? "Good morning"
+                                    : hour < 18
+                                        ? "Good afternoon"
+                                        : "Good evening";
+                            })()}
+                            <span className="text-brand-blue">.</span>
+                        </h2>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            Here’s what’s happening with your sales pipeline.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => navigate("/new-client")}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-blue-900/10 hover:bg-brand-navy"
+                    >
+                        <Plus size={16} /> Add new client
+                    </button>
                 </div>
-                <button onClick={() => navigate("/new-client")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-blue-900/10 hover:bg-brand-navy">
-                    <Plus size={16} /> Add new client
-                </button>
-            </div>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {stats.map((s) => (
@@ -76,7 +118,7 @@ export default function SalesDashboard() {
                 </section>
             </div>
 
-            <RecentClients clients={clients} onViewAll={() => navigate("/project-overview")} />
+            <RecentClients clients={clients} onViewAll={() => navigate("/client-overview")} />
         </div>
     );
 }

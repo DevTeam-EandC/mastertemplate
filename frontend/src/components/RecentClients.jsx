@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Search, X, SlidersHorizontal, Check } from "lucide-react";
 import Status from "./ui/Status";
 import { STATUSES } from "../data/constants";
 
@@ -39,6 +39,7 @@ export default function RecentClients({ clients, onViewAll }) {
     const [query, setQuery] = useState("");
     const [filters, setFilters] = useState(initialFilters);
     const [statusSel, setStatusSel] = useState([]);
+    const [statusModalOpen, setStatusModalOpen] = useState(false);
     const [visible, setVisible] = useState(10);
 
     const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
@@ -66,7 +67,8 @@ export default function RecentClients({ clients, onViewAll }) {
     });
 
     const countFor = (s) => base.filter((c) => c.status === s).length;
-    const allChecked = statusSel.length === STATUSES.length;
+    // An empty selection means all statuses are shown, so treat it as "All" checked.
+    const allChecked = statusSel.length === 0 || statusSel.length === STATUSES.length;
     // No status boxes selected means show the complete matching client list.
     // Once one or more statuses are selected, show only those statuses.
     const rows = statusSel.length === 0 ? base : base.filter((c) => statusSel.includes(c.status));
@@ -91,27 +93,31 @@ export default function RecentClients({ clients, onViewAll }) {
 
     return (
         <div className="space-y-4">
-            {/* Search bar — its own card */}
-            <div className="relative rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-                <Search size={15} className="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                    value={query}
-                    onChange={(e) => { setQuery(e.target.value); setVisible(10); }}
-                    placeholder="Search by project code (last 3 digits), client name, or project name..."
-                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-xs focus:border-brand-steel"
-                />
-            </div>
 
             <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-soft">
                 {/* Header: title and month filter */}
-                <div className="flex flex-col justify-between gap-3 p-5 lg:flex-row lg:items-end">
+                <div className="flex flex-col gap-4 p-5 lg:grid lg:grid-cols-[1fr_minmax(320px,560px)_1fr] lg:items-center">
+                    {/* Left: title */}
                     <div>
                         <h3 className="text-sm font-semibold text-brand-ink">Recent clients</h3>
                         <p className="mt-1 text-[11px] text-slate-400">
                             {rows.length} record{rows.length === 1 ? "" : "s"} found
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-end gap-2">
+
+                    {/* Center: search bar */}
+                    <div className="relative w-full">
+                        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            value={query}
+                            onChange={(e) => { setQuery(e.target.value); setVisible(10); }}
+                            placeholder="Search code (last 3 digits), client, or project"
+                            className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-xs focus:border-brand-steel"
+                        />
+                    </div>
+
+                    {/* Right: month filter */}
+                    <div className="lg:justify-self-end">
                         <div className="w-44">
                             <FilterSelect
                                 filter={MONTH_FILTER}
@@ -129,30 +135,103 @@ export default function RecentClients({ clients, onViewAll }) {
                 </div>
 
 
-                {/* Status checkboxes */}
+                {/* Status filter trigger. The checkboxes are displayed in a modal. */}
                 <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
-                    <span className="mr-1 text-[11px] font-semibold text-slate-500">Show</span>
-
-                    <label className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${allChecked ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-500"}`}>
-                        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="accent-brand-blue" />
-                        All
-                        <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] text-slate-500">{base.length}</span>
-                    </label>
-
-                    {STATUSES.map((s) => {
-                        const checked = statusSel.includes(s);
-                        return (
-                            <label
-                                key={s}
-                                className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${checked ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-500"}`}
-                            >
-                                <input type="checkbox" checked={checked} onChange={() => toggleStatus(s)} className="accent-brand-blue" />
-                                {s}
-                                <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] text-slate-500">{countFor(s)}</span>
-                            </label>
-                        );
-                    })}
+                    <span className="mr-1 text-[11px] font-semibold text-slate-500">Filter:</span>
+                    <button
+                        type="button"
+                        onClick={() => setStatusModalOpen(true)}
+                        aria-haspopup="dialog"
+                        aria-expanded={statusModalOpen}
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${statusSel.length > 0 && statusSel.length !== STATUSES.length ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                        <SlidersHorizontal size={14} />
+                        Filter by status
+                        {statusSel.length > 0 && statusSel.length !== STATUSES.length && (
+                            <span className="rounded-full bg-brand-blue px-1.5 py-0.5 text-[10px] text-white">{statusSel.length}</span>
+                        )}
+                    </button>
+                    <span className="text-[11px] text-slate-400">
+                        {statusSel.length === 0 || statusSel.length === STATUSES.length
+                            ? "Showing all statuses"
+                            : `${statusSel.length} status${statusSel.length === 1 ? "" : "es"} selected`}
+                    </span>
                 </div>
+
+                {/* Status checkbox modal */}
+                {statusModalOpen && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+                        onMouseDown={(e) => {
+                            if (e.target === e.currentTarget) setStatusModalOpen(false);
+                        }}
+                    >
+                        <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="status-filter-title"
+                            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+                        >
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 id="status-filter-title" className="text-sm font-semibold text-brand-ink">Filter clients by status</h3>
+                                    <p className="mt-1 text-xs text-slate-400">Select one or more statuses to filter the client list.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusModalOpen(false)}
+                                    aria-label="Close status filter"
+                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                >
+                                    <X size={17} />
+                                </button>
+                            </div>
+
+                            <div className="mt-5 space-y-2">
+                                <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                    <span className="flex items-center gap-3">
+                                        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="h-4 w-4 accent-brand-blue" />
+                                        All statuses
+                                    </span>
+                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-500">{base.length}</span>
+                                </label>
+
+                                {STATUSES.map((s) => {
+                                    const checked = statusSel.includes(s);
+                                    return (
+                                        <label
+                                            key={s}
+                                            className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-3 text-xs font-medium transition ${checked ? "border-brand-steel bg-brand-mist text-brand-blue" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                                        >
+                                            <span className="flex items-center gap-3">
+                                                <input type="checkbox" checked={checked} onChange={() => toggleStatus(s)} className="h-4 w-4 accent-brand-blue" />
+                                                {s}
+                                            </span>
+                                            <span className="rounded-full bg-white px-2 py-1 text-[10px] text-slate-500">{countFor(s)}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusSel([])}
+                                    className="text-xs font-semibold text-slate-500 hover:text-brand-blue"
+                                >
+                                    Clear selection
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusModalOpen(false)}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-brand-blue px-4 py-2.5 text-xs font-semibold text-white hover:bg-brand-navy"
+                                >
+                                    <Check size={14} /> Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Table */}
                 <div className="overflow-x-auto">

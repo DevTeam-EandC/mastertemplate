@@ -7,9 +7,9 @@ export default function Brand({ compact = false }) {
       {!compact && (
         <div>
           <div className="text-[17px] font-bold tracking-tight text-white">
-            Elice and Charles Solutions Inc.<span className="text-brand-steel">.</span>
+            Elisha and Charles Solutions, Inc<span className="text-brand-steel">.</span>
           </div>
-          <div className="text-[10px] font-medium uppercase tracking-[.2em] text-blue-200/70">Elevator Solutions</div>
+          <div className="text-[10px] font-medium uppercase tracking-[.2em] text-blue-200/70">Your Elevator and Escalator Company</div>
         </div>
       )}
     </div>

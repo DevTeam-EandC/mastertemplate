@@ -34,6 +34,8 @@ export function ClientsProvider({ children }) {
         quotation_purpose: form.quotation_purpose,
         project_location: form.project_location,
         company_name: form.company_name,
+        email_address: form.email_address,
+        contact_number: form.contact_number,
         created_at: new Date().toISOString(),
     };
     const next = [record, ...clients];

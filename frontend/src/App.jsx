@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import SalesDashboard from "./pages/SalesDashboard";
 import NewClient from "./pages/NewClient";
 import ProjectOverview from "./pages/ProjectOverview";
+import ClientOverview from "./pages/ClientOverview";
 
 export default function App() {
     const navigate = useNavigate();
@@ -31,8 +32,8 @@ export default function App() {
                     <Route element={<AppLayout user={user} onLogout={logout} />}>
                         <Route index element={<SalesDashboard />} />
                         <Route path="new-client" element={<NewClient />} />
+                        <Route path="client-overview" element={<ClientOverview />} />
                         <Route path="project-overview" element={<ProjectOverview />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                 </Routes>
             </RfqFormProvider>
