@@ -91,6 +91,7 @@ export function RfqFormProvider({ children }) {
       project: {
           project_type: form.project_type, elevator_category: form.elevator_category,
           project_code: form.project_code, project_name: form.project_name, building_type: form.building_type,
+          project_location: form.project_location,
           sales_id: form.sales_id, account_manager_id: form.account_manager_id, source: form.source,
           unit_type: form.unit_type, referral: form.referral,
           remarks: form.remarks, quotation_purpose: form.quotation_purpose,

@@ -5,8 +5,8 @@
     });
 
     export const defaultClientForm = () => ({
-      honorific: "", last_name: "", first_name: "", middle_name: "", suffix: "", contact_number: "", email_address: "",
-        project_type: "Private", elevator_category: "NE", project_code: "", project_name: "", building_type: "",
+      honorific: "", last_name: "", first_name: "", middle_name: "", suffix: "", contact_number: "", company_name: "", email_address: "",
+        project_type: "Private", elevator_category: "NE", project_code: "", project_name: "", building_type: "", project_location: "",
         sales_id: "", account_manager_id: "", source: "", unit_type: "New unit without inspection",
       referral: "", remarks: "", quotation_purpose: "", total_qty: "",
       elevator_specs: [newElevatorGroup()],
@@ -33,8 +33,12 @@
       );
     };
 
-    export const project_codeFor = (f, seq) =>
-      `${f.project_type === "Government" ? "G" : "P"}-${f.elevator_category || "NE"}-${(f.project_code || "XX").toUpperCase()}-${new Date().getFullYear()}-${String(seq).padStart(3, "0")}`;
+export const project_codeFor = (f, seq) => {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    return `${f.project_type === "Government" ? "G" : "P"}-${f.elevator_category || "NE"}-${(f.project_code || "XX").toUpperCase()}-${mm}${yyyy}-${String(seq).padStart(4, "0")}`;
+};
 
     export const fullName = (f) =>
       [f.honorific, f.first_name, f.middle_name, f.last_name, f.suffix].filter(Boolean).join(" ");
@@ -42,14 +46,14 @@
     export const totalAllocated = (elevator_specs) => elevator_specs.reduce((n, g) => n + (Number(g.quantity) || 0), 0);
 
     export const validateCustomer = (form) =>
-        !form.last_name.trim() || !form.first_name.trim() || !form.contact_number.trim() || !form.email_address.trim()
+        !form.honorific.trim() || !form.last_name.trim() || !form.first_name.trim() || !form.contact_number.trim() || !form.email_address.trim()
         ? "Complete the required client name, contact number, and email address."
         : "";
 
     export const validateProject = (form) => {
       const total = Number(form.total_qty) || 0;
       const allocated = totalAllocated(form.elevator_specs);
-      if (!form.project_code || !form.building_type.trim() || !form.sales_id || !form.source || !form.quotation_purpose)
+      if (!form.project_code || !form.building_type.trim() || !form.project_location.trim() || !form.sales_id || !form.source || !form.quotation_purpose)
         return "Complete the required project information and generate a project code.";
       if (!total || total < 1 || total > 100) return "Enter a total quantity from 1 to 100.";
       if (allocated !== total) return `Group quantities must total ${total}. Currently allocated: ${allocated}.`;

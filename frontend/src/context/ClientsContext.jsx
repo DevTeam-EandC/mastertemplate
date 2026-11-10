@@ -24,7 +24,17 @@ export function ClientsProvider({ children }) {
       status: form.quotation_purpose === "For Site Inspection" ? "For site inspection" : "For quotation",
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }),
         elevators: form.elevatorCount || Number(form.total_qty) || 1,
-      details: form.rfqPayload || form,
+        details: form.rfqPayload || form,
+        project_name: form.project_name,
+        building_type: form.building_type,
+        project_type: form.project_type,
+        elevator_category: form.elevator_category,
+        source: form.source,
+        unit_type: form.unit_type,
+        quotation_purpose: form.quotation_purpose,
+        project_location: form.project_location,
+        company_name: form.company_name,
+        created_at: new Date().toISOString(),
     };
     const next = [record, ...clients];
     setClients(next);

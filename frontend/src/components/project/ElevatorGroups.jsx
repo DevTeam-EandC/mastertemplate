@@ -145,7 +145,7 @@ export default function ElevatorGroups() {
         <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
           <div className={`h-full rounded-full ${balanced ? "bg-emerald-500" : "bg-brand-blue"}`} style={{ width: `${total ? Math.min(100, (allocated / total) * 100) : 0}%` }} />
         </div>
-      </div>
+      </div>    
 
       <div className="space-y-5">
               {form.elevator_specs.map((g, i) => <GroupCard key={i} group={g} index={i} />)}

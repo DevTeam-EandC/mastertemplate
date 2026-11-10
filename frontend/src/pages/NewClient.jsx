@@ -44,7 +44,7 @@ export default function NewClient() {
     const validators = [
         () => validateCustomer(form),
         () =>
-            !form.project_code || !form.building_type.trim() || !form.sales_id || !form.source || !form.quotation_purpose
+            !form.project_code || !form.building_type.trim() || !form.sales_id || !form.source || !form.quotation_purpose || !form.project_location
                 ? "Complete the required project information and generate a project code."
                 : "",
         () => (!total || total < 1 || total > 100 ? "Enter a total quantity from 1 to 100." : ""),

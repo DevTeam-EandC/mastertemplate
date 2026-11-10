@@ -25,8 +25,8 @@ export const SO_AM = {
   "SO-005": "Lisa Garcia (AM)",
 };
 
-export const HONORIFICS = ["Mr.", "Mrs.", "Ms.", "Dr.", "Engr.", "Atty."];
-export const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV"];
+export const HONORIFICS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Engr.", "Atty.", "Hon."];
+export const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "V"];
 export const LEAD_SOURCES = ["Viber", "Email", "B2B", "Ads", "Social Media", "Referral", "Walk-in"];
 export const QUOTATION_TYPES = ["For Reference", "For Site Inspection"];
 export const CAPACITIES = [

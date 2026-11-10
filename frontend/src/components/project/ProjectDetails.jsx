@@ -43,7 +43,10 @@ export default function ProjectDetails() {
             }}
             placeholder="e.g. Manlyn Vilal Residences"
           />
-        </Field>
+              </Field>
+              <Field label="Project location" required>
+                  <Input value={form.project_location} onChange={(e) => update("project_location", e.target.value)} placeholder="e.g. Makati City" />
+              </Field>
         <Field label="Building type" required>
                   <Input value={form.building_type} onChange={(e) => update("building_type", e.target.value)} placeholder="e.g. Residential condo, commercial building" />
         </Field>
