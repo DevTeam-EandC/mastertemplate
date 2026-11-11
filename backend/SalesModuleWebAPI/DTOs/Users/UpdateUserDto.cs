@@ -1,4 +1,3 @@
-
 using System.ComponentModel.DataAnnotations;
 
 namespace SalesModuleWebAPI.DTOs.Users
@@ -16,10 +15,6 @@ namespace SalesModuleWebAPI.DTOs.Users
         [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
-
-        public Guid? DepartmentId { get; set; }
-
-        public Guid? PositionId { get; set; }
 
         public bool IsActive { get; set; }
     }

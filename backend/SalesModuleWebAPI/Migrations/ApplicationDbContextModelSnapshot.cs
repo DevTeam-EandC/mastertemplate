@@ -16,7 +16,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261111090631_UpdateUserManagement";
+    public override string LastMigrationId => "20261111095047_AddRefreshTokens";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -318,6 +318,39 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("Positions");
             });
 
+        modelBuilder.Entity("SalesModuleWebAPI.Models.RefreshToken", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<DateTime>("ExpiresAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<DateTime?>("RevokedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("TokenHash")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)");
+
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
+
+                b.HasKey("Id");
+
+                b.HasIndex("TokenHash")
+                    .IsUnique();
+
+                b.HasIndex("UserId");
+
+                b.ToTable("RefreshTokens");
+            });
+
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
             {
                 b.HasOne("SalesModuleWebAPI.Models.ApplicationRole", null)
@@ -395,6 +428,17 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
 
                 b.Navigation("Department");
+            });
+
+        modelBuilder.Entity("SalesModuleWebAPI.Models.RefreshToken", b =>
+            {
+                b.HasOne("SalesModuleWebAPI.Models.ApplicationUser", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("User");
             });
 
         modelBuilder.Entity("SalesModuleWebAPI.Models.Department", b =>

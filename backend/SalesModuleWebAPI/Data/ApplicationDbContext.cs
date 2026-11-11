@@ -7,9 +7,11 @@ using SalesModuleWebAPI.Models;
 
 namespace SalesModuleWebAPI.Data
 {
+
     public class ApplicationDbContext :
        IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
+
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -20,6 +22,8 @@ namespace SalesModuleWebAPI.Data
         public DbSet<Department> Departments => Set<Department>();
 
         public DbSet<Position> Positions => Set<Position>();
+        public DbSet<UserDepartmentPosition> UserDepartmentPositions
+    => Set<UserDepartmentPosition>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -44,17 +48,6 @@ namespace SalesModuleWebAPI.Data
                 .HasForeignKey(p => p.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<ApplicationUser>()
-                .HasOne(u => u.Department)
-                .WithMany()
-                .HasForeignKey(u => u.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            builder.Entity<ApplicationUser>()
-                .HasOne(u => u.Position)
-                .WithMany()
-                .HasForeignKey(u => u.PositionId)
-                .OnDelete(DeleteBehavior.SetNull);
             builder.Entity<RefreshToken>(entity =>
             {
                 entity.HasKey(x => x.Id);
@@ -71,6 +64,33 @@ namespace SalesModuleWebAPI.Data
                     .HasForeignKey(x => x.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+            builder.Entity<UserDepartmentPosition>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.HasOne(x => x.User)
+                    .WithMany(u => u.DepartmentAssignments)
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Department)
+                    .WithMany()
+                    .HasForeignKey(x => x.DepartmentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Position)
+                    .WithMany()
+                    .HasForeignKey(x => x.PositionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new
+                {
+                    x.UserId,
+                    x.DepartmentId,
+                    x.PositionId
+                }).IsUnique();
+            });
         }
+
     }
 }

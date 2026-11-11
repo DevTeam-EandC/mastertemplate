@@ -1,9 +1,9 @@
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SalesModuleWebAPI.Data;
+using SalesModuleWebAPI.DTOs.UserAssignments;
 using SalesModuleWebAPI.DTOs.Users;
 using SalesModuleWebAPI.Models;
 
@@ -35,8 +35,10 @@ namespace SalesModuleWebAPI.Controllers
         public async Task<IActionResult> GetUsers()
         {
             var users = await _context.Users
-                .Include(u => u.Department)
-                .Include(u => u.Position)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Department)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Position)
                 .OrderBy(u => u.FirstName)
                 .ToListAsync();
 
@@ -56,8 +58,10 @@ namespace SalesModuleWebAPI.Controllers
         public async Task<IActionResult> GetUser(Guid id)
         {
             var user = await _context.Users
-                .Include(u => u.Department)
-                .Include(u => u.Position)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Department)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Position)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -69,6 +73,38 @@ namespace SalesModuleWebAPI.Controllers
             }
 
             return Ok(await MapUser(user));
+        }
+
+        // GET: api/users/{id}/department-assignments
+
+        [HttpGet("{id:guid}/department-assignments")]
+        public async Task<IActionResult> GetDepartmentAssignments(Guid id)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            var assignments = await _context.UserDepartmentPositions
+                .Where(x => x.UserId == id)
+                .Include(x => x.Department)
+                .Include(x => x.Position)
+                .Select(x => new UserDepartmentPositionDto
+                {
+                    Id = x.Id,
+                    DepartmentId = x.DepartmentId,
+                    DepartmentCode = x.Department!.Code,
+                    DepartmentName = x.Department.Name,
+                    PositionId = x.PositionId,
+                    PositionName = x.Position!.Name,
+                    IsPrimary = x.IsPrimary,
+                    IsActive = x.IsActive,
+                    AssignedAtUtc = x.AssignedAtUtc
+                })
+                .ToListAsync();
+
+            return Ok(assignments);
         }
 
         // POST: api/users
@@ -116,8 +152,6 @@ namespace SalesModuleWebAPI.Controllers
                 LastName = dto.LastName.Trim(),
                 UserName = email,
                 Email = email,
-                DepartmentId = dto.DepartmentId,
-                PositionId = dto.PositionId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -151,9 +185,25 @@ namespace SalesModuleWebAPI.Controllers
                 }
             }
 
+            if (dto.DepartmentId.HasValue)
+            {
+                _context.UserDepartmentPositions.Add(
+                    new UserDepartmentPosition
+                    {
+                        UserId = user.Id,
+                        DepartmentId = dto.DepartmentId.Value,
+                        PositionId = dto.PositionId!.Value,
+                        IsPrimary = true
+                    });
+
+                await _context.SaveChangesAsync();
+            }
+
             var createdUser = await _context.Users
-                .Include(u => u.Department)
-                .Include(u => u.Position)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Department)
+                .Include(u => u.DepartmentAssignments)
+                    .ThenInclude(assignment => assignment.Position)
                 .FirstAsync(u => u.Id == user.Id);
 
             return CreatedAtAction(
@@ -201,8 +251,6 @@ namespace SalesModuleWebAPI.Controllers
 
             user.FirstName = dto.FirstName.Trim();
             user.LastName = dto.LastName.Trim();
-            user.DepartmentId = dto.DepartmentId;
-            user.PositionId = dto.PositionId;
             user.IsActive = dto.IsActive;
 
             var emailResult = await _userManager.SetEmailAsync(
@@ -230,6 +278,26 @@ namespace SalesModuleWebAPI.Controllers
                 {
                     errors = updateResult.Errors.Select(e => e.Description)
                 });
+
+            var existingAssignments = await _context.UserDepartmentPositions
+                .Where(assignment => assignment.UserId == user.Id)
+                .ToListAsync();
+
+            _context.UserDepartmentPositions.RemoveRange(existingAssignments);
+
+            if (dto.DepartmentId.HasValue)
+            {
+                _context.UserDepartmentPositions.Add(
+                    new UserDepartmentPosition
+                    {
+                        UserId = user.Id,
+                        DepartmentId = dto.DepartmentId.Value,
+                        PositionId = dto.PositionId!.Value,
+                        IsPrimary = true
+                    });
+            }
+
+            await _context.SaveChangesAsync();
 
             return Ok(new
             {
@@ -290,7 +358,7 @@ namespace SalesModuleWebAPI.Controllers
             }
 
             var removeResult = await _userManager.RemoveFromRolesAsync(
-    user, currentRoles);
+                user, currentRoles);
 
             if (!removeResult.Succeeded)
             {
@@ -305,7 +373,6 @@ namespace SalesModuleWebAPI.Controllers
 
             if (!addResult.Succeeded)
             {
-                // Restore original roles
                 await _userManager.AddToRolesAsync(user, currentRoles);
 
                 return BadRequest(new
@@ -318,6 +385,108 @@ namespace SalesModuleWebAPI.Controllers
             {
                 message = "User roles updated successfully."
             });
+        }
+
+        // PUT: api/users/{id}/department-assignments
+
+        [HttpPut("{id:guid}/department-assignments")]
+        public async Task<IActionResult> UpdateDepartmentAssignments(
+            Guid id,
+            UpdateUserAssignmentsDto request)
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+
+            if (user == null)
+                return NotFound("User not found.");
+
+            if (request.Assignments == null)
+                return BadRequest("Assignments are required.");
+
+            var assignments = request.Assignments;
+
+            if (assignments.GroupBy(x => new
+            {
+                x.DepartmentId,
+                x.PositionId
+            }).Any(g => g.Count() > 1))
+            {
+                return BadRequest("Duplicate assignments are not allowed.");
+            }
+
+            if (assignments.Count > 0 &&
+                assignments.Count(x => x.IsPrimary) != 1)
+            {
+                return BadRequest(
+                    "Exactly one primary assignment is required.");
+            }
+
+            var validatedAssignments =
+                new List<UserDepartmentPosition>();
+
+            foreach (var item in assignments)
+            {
+                var department = await _context.Departments
+                    .FirstOrDefaultAsync(d =>
+                        d.Id == item.DepartmentId &&
+                        d.IsActive);
+
+                if (department == null)
+                    return BadRequest("Invalid or inactive department.");
+
+                var position = await _context.Positions
+                    .FirstOrDefaultAsync(p =>
+                        p.Id == item.PositionId &&
+                        p.DepartmentId == item.DepartmentId &&
+                        p.IsActive);
+
+                if (position == null)
+                {
+                    return BadRequest(
+                        $"The selected position does not belong to " +
+                        $"{department.Name} or is inactive.");
+                }
+
+                validatedAssignments.Add(new UserDepartmentPosition
+                {
+                    UserId = id,
+                    DepartmentId = item.DepartmentId,
+                    PositionId = item.PositionId,
+                    IsPrimary = item.IsPrimary,
+                    IsActive = true
+                });
+            }
+
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var existingAssignments = await _context
+                    .UserDepartmentPositions
+                    .Where(x => x.UserId == id)
+                    .ToListAsync();
+
+                _context.UserDepartmentPositions.RemoveRange(
+                    existingAssignments);
+
+                _context.UserDepartmentPositions.AddRange(
+                    validatedAssignments);
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Department assignments updated successfully.",
+                    assignmentCount = validatedAssignments.Count
+                });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         // PATCH: api/users/{id}/status
@@ -398,14 +567,15 @@ namespace SalesModuleWebAPI.Controllers
             });
         }
 
-        // Validate department and position relationship
-
         private async Task<string?> ValidateAssignment(
             Guid? departmentId,
             Guid? positionId)
         {
             if (positionId.HasValue && !departmentId.HasValue)
                 return "A department is required when assigning a position.";
+
+            if (departmentId.HasValue && !positionId.HasValue)
+                return "A position is required when assigning a department.";
 
             if (departmentId.HasValue)
             {
@@ -433,8 +603,6 @@ namespace SalesModuleWebAPI.Controllers
             return null;
         }
 
-        // Map user to response DTO
-
         private async Task<UserResponseDto> MapUser(
             ApplicationUser user)
         {
@@ -447,11 +615,20 @@ namespace SalesModuleWebAPI.Controllers
                 LastName = user.LastName,
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email ?? "",
-                DepartmentId = user.DepartmentId,
-                DepartmentCode = user.Department?.Code,
-                DepartmentName = user.Department?.Name,
-                PositionId = user.PositionId,
-                PositionName = user.Position?.Name,
+                DepartmentAssignments = user.DepartmentAssignments
+                    .Select(assignment => new UserDepartmentPositionDto
+                    {
+                        Id = assignment.Id,
+                        DepartmentId = assignment.DepartmentId,
+                        DepartmentCode = assignment.Department!.Code,
+                        DepartmentName = assignment.Department.Name,
+                        PositionId = assignment.PositionId,
+                        PositionName = assignment.Position!.Name,
+                        IsPrimary = assignment.IsPrimary,
+                        IsActive = assignment.IsActive,
+                        AssignedAtUtc = assignment.AssignedAtUtc
+                    })
+                    .ToList(),
                 Roles = roles.ToList(),
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt

@@ -11,7 +11,6 @@ namespace SalesModuleWebAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = "System Admin")]
-    [Route("api/[controller]")]
     public class RolesController : ControllerBase
     {
         private readonly RoleManager<ApplicationRole> _roleManager;

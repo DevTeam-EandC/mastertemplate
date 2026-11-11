@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using SalesModuleWebAPI.DTOs.UserAssignments;
 
 namespace SalesModuleWebAPI.DTOs.Users
 {
-    public class CreateUserDto : Controller
+    public class CreateUserDto
     {
         [Required]
         [StringLength(100)]
@@ -21,9 +21,7 @@ namespace SalesModuleWebAPI.DTOs.Users
         [MinLength(8)]
         public string Password { get; set; } = string.Empty;
 
-        public Guid? DepartmentId { get; set; }
-
-        public Guid? PositionId { get; set; }
+        public List<UserAssignmentItemDto> Assignments { get; set; } = new();
 
         public List<string> Roles { get; set; } = new();
     }

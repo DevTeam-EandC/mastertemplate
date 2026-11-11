@@ -1,3 +1,5 @@
+using SalesModuleWebAPI.DTOs.UserAssignments;
+
 namespace SalesModuleWebAPI.DTOs.Users
 {
     public class UserResponseDto
@@ -12,15 +14,10 @@ namespace SalesModuleWebAPI.DTOs.Users
 
         public string Email { get; set; } = string.Empty;
 
-        public Guid? DepartmentId { get; set; }
 
-        public string? DepartmentCode { get; set; }
+        public List<UserDepartmentPositionDto> DepartmentAssignments
+        { get; set; } = new();
 
-        public string? DepartmentName { get; set; }
-
-        public Guid? PositionId { get; set; }
-
-        public string? PositionName { get; set; }
 
         public List<string> Roles { get; set; } = new();
 

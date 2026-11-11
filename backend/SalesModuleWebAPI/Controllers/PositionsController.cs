@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SalesModuleWebAPI.Data;
 using SalesModuleWebAPI.DTOs.Positions;
 using SalesModuleWebAPI.Models;
-
+using SalesModuleWebAPI.DTOs.UserAssignments;
 
 namespace SalesModuleWebAPI.Controllers
 {
@@ -232,8 +232,8 @@ namespace SalesModuleWebAPI.Controllers
                 });
             }
 
-            bool assignedToUsers = await _context.Users
-                .AnyAsync(u => u.PositionId == id);
+            bool assignedToUsers = await _context.UserDepartmentPositions
+                .AnyAsync(assignment => assignment.PositionId == id);
 
             if (assignedToUsers)
             {
