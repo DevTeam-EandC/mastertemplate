@@ -3,7 +3,11 @@ export const initialClients = [
   { id: "EC-24017", name: "Miguel Dela Cruz", project: "Residential · New unit", officer: "Daniel Lim", status: "For site inspection", date: "Nov 07, 2026", elevators: 1 },
   { id: "EC-24016", name: "Sofia Villanueva", project: "Commercial · Modernization", officer: "Mika Santos", status: "In progress", date: "Nov 06, 2026", elevators: 3 },
   { id: "EC-24015", name: "Gabriel Tan", project: "Private · New unit", officer: "Paolo Garcia", status: "Completed", date: "Nov 04, 2026", elevators: 1 },
-  { id: "EC-24014", name: "Isabella Lim", project: "Residential · New unit", officer: "Daniel Lim", status: "For quotation", date: "Nov 02, 2026", elevators: 2 },
+  { id: "EC-24013", name: "Troy Lim", project: "Residential · New unit", officer: "Daniel Lim", status: "For quotation", date: "Nov 02, 2026", elevators: 2 },
+  { id: "EC-24015", name: "Derek Jones", project: "Residential · New unit", officer: "Daniel Lim", status: "For quotation", date: "Aug 01, 2026", elevators: 2 },
+  { id: "EC-24016", name: "Gab Garcia", project: "Residential · New unit", officer: "Daniel Lim", status: "For quotation", date: "Sept 02, 2026", elevators: 2 },
+     { id: "EC-24017", name: "Bella Lim", project: "Residential · New unit", officer: "Daniel Lim", status: "For Site Inspection", date: "Dec 02, 2026", elevators: 2 },
+  { id: "EC-24018", name: "Cristy  Smith", project: "Residential · New unit", officer: "Daniel Lim", status: "For quotation", date: "Aug 02, 2026", elevators: 2 },
 ];
 
 export const STATUSES = ["For quotation", "For site inspection", "In progress", "Completed"];
