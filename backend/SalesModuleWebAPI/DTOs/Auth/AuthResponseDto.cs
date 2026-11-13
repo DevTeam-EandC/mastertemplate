@@ -1,3 +1,4 @@
+
 namespace SalesModuleWebAPI.DTOs.Auth
 {
     public class AuthResponseDto
@@ -15,5 +16,7 @@ namespace SalesModuleWebAPI.DTOs.Auth
         public string Email { get; set; } = string.Empty;
 
         public List<string> Roles { get; set; } = new();
+
+        public List<DashboardAssignmentDto> Dashboards { get; set; } = new();
     }
 }

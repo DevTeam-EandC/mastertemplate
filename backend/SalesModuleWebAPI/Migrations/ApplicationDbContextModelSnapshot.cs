@@ -16,7 +16,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261111095047_AddRefreshTokens";
+    public override string LastMigrationId => "20261112001107_AddMultipleUserDepartmentAssignments";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -176,9 +176,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<DateTime>("CreatedAt")
                     .HasColumnType("timestamp with time zone");
 
-                b.Property<Guid?>("DepartmentId")
-                    .HasColumnType("uuid");
-
                 b.Property<string>("Email")
                     .HasMaxLength(256)
                     .HasColumnType("character varying(256)");
@@ -220,9 +217,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<bool>("PhoneNumberConfirmed")
                     .HasColumnType("boolean");
 
-                b.Property<Guid?>("PositionId")
-                    .HasColumnType("uuid");
-
                 b.Property<string>("SecurityStamp")
                     .HasColumnType("text");
 
@@ -235,16 +229,12 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
                 b.HasKey("Id");
 
-                b.HasIndex("DepartmentId");
-
                 b.HasIndex("NormalizedEmail")
                     .HasDatabaseName("EmailIndex");
 
                 b.HasIndex("NormalizedUserName")
                     .IsUnique()
                     .HasDatabaseName("UserNameIndex");
-
-                b.HasIndex("PositionId");
 
                 b.ToTable("AspNetUsers");
             });
@@ -351,6 +341,42 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("RefreshTokens");
             });
 
+        modelBuilder.Entity("SalesModuleWebAPI.Models.UserDepartmentPosition", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
+
+                b.Property<DateTime>("AssignedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<Guid>("DepartmentId")
+                    .HasColumnType("uuid");
+
+                b.Property<bool>("IsActive")
+                    .HasColumnType("boolean");
+
+                b.Property<bool>("IsPrimary")
+                    .HasColumnType("boolean");
+
+                b.Property<Guid>("PositionId")
+                    .HasColumnType("uuid");
+
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
+
+                b.HasKey("Id");
+
+                b.HasIndex("DepartmentId");
+
+                b.HasIndex("PositionId");
+
+                b.HasIndex("UserId", "DepartmentId", "PositionId")
+                    .IsUnique();
+
+                b.ToTable("UserDepartmentPositions");
+            });
+
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
             {
                 b.HasOne("SalesModuleWebAPI.Models.ApplicationRole", null)
@@ -402,23 +428,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
             });
 
-        modelBuilder.Entity("SalesModuleWebAPI.Models.ApplicationUser", b =>
-            {
-                b.HasOne("SalesModuleWebAPI.Models.Department", "Department")
-                    .WithMany()
-                    .HasForeignKey("DepartmentId")
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                b.HasOne("SalesModuleWebAPI.Models.Position", "Position")
-                    .WithMany()
-                    .HasForeignKey("PositionId")
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                b.Navigation("Department");
-
-                b.Navigation("Position");
-            });
-
         modelBuilder.Entity("SalesModuleWebAPI.Models.Position", b =>
             {
                 b.HasOne("SalesModuleWebAPI.Models.Department", "Department")
@@ -439,6 +448,38 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
 
                 b.Navigation("User");
+            });
+
+        modelBuilder.Entity("SalesModuleWebAPI.Models.UserDepartmentPosition", b =>
+            {
+                b.HasOne("SalesModuleWebAPI.Models.Department", "Department")
+                    .WithMany()
+                    .HasForeignKey("DepartmentId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("SalesModuleWebAPI.Models.Position", "Position")
+                    .WithMany()
+                    .HasForeignKey("PositionId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("SalesModuleWebAPI.Models.ApplicationUser", "User")
+                    .WithMany("DepartmentAssignments")
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("Department");
+
+                b.Navigation("Position");
+
+                b.Navigation("User");
+            });
+
+        modelBuilder.Entity("SalesModuleWebAPI.Models.ApplicationUser", b =>
+            {
+                b.Navigation("DepartmentAssignments");
             });
 
         modelBuilder.Entity("SalesModuleWebAPI.Models.Department", b =>
