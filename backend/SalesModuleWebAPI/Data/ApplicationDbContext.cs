@@ -7,7 +7,6 @@ using SalesModuleWebAPI.Models;
 
 namespace SalesModuleWebAPI.Data
 {
-
     public class ApplicationDbContext :
        IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
     {
@@ -17,13 +16,15 @@ namespace SalesModuleWebAPI.Data
             : base(options)
         {
         }
+
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
         public DbSet<Department> Departments => Set<Department>();
 
         public DbSet<Position> Positions => Set<Position>();
+
         public DbSet<UserDepartmentPosition> UserDepartmentPositions
-    => Set<UserDepartmentPosition>();
+            => Set<UserDepartmentPosition>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="Design Department Head Dashboard"
                 description="Monitor design employees, projects, and department tasks."
                 cards={[
-                    { title: "Design Employees", value: 0 },
-                    { title: "Design Projects", value: 0 },
-                    { title: "Pending Approvals", value: 0 },
-                    { title: "Department Tasks", value: 0 },
+                    { key: "designEmployees", title: "Design Employees" },
+                    { key: "designProjects", title: "Design Projects" },
+                    { key: "pendingApprovals", title: "Pending Approvals" },
+                    { key: "departmentTasks", title: "Department Tasks" },
                 ]}
             />
         </DashboardLayout>

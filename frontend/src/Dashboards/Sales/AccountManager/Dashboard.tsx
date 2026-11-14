@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="Account Manager Dashboard"
                 description="Manage customer accounts and sales activities."
                 cards={[
-                    { title: "My Customers", value: 0 },
-                    { title: "Active Accounts", value: 0 },
-                    { title: "Pending Quotations", value: 0 },
-                    { title: "Sales Activities", value: 0 },
+                    { key: "myCustomers", title: "My Customers" },
+                    { key: "activeAccounts", title: "Active Accounts" },
+                    { key: "pendingQuotations", title: "Pending Quotations" },
+                    { key: "salesActivities", title: "Sales Activities" },
                 ]}
             />
         </DashboardLayout>

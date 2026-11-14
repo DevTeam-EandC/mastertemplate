@@ -1,158 +1,375 @@
 
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SalesModuleWebAPI.Models;
 
-namespace SalesModuleWebAPI.Data
+namespace SalesModuleWebAPI.Data;
+
+public static class DbSeeder
 {
-    public static class DbSeeder
+    // ==========================================
+    // MAIN DATABASE SEEDER
+    // ==========================================
+    public static async Task SeedAsync(IServiceProvider services)
     {
-        public static async Task SeedAsync(
-            IServiceProvider services)
+        using var scope = services.CreateScope();
+
+        var db = scope.ServiceProvider
+            .GetRequiredService<ApplicationDbContext>();
+
+        // Apply pending EF Core migrations.
+        await db.Database.MigrateAsync();
+    }
+
+    // ==========================================
+    // SEED ALL DEVELOPMENT DATA
+    // ==========================================
+    public static async Task SeedSampleUsersAsync(
+        IServiceProvider services,
+        IConfiguration configuration)
+    {
+        using var scope = services.CreateScope();
+
+        var userManager = scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+
+        var roleManager = scope.ServiceProvider
+            .GetRequiredService<RoleManager<ApplicationRole>>();
+
+        var db = scope.ServiceProvider
+            .GetRequiredService<ApplicationDbContext>();
+
+        var password = configuration["SampleUsers:Password"];
+
+        if (string.IsNullOrWhiteSpace(password))
         {
-            using var scope = services.CreateScope();
+            throw new InvalidOperationException(
+                "SampleUsers:Password is missing from configuration.");
+        }
 
-            var db = scope.ServiceProvider
-                .GetRequiredService<ApplicationDbContext>();
+        // 1. Seed departments.
+        await SeedDepartmentsAsync(db);
 
-            var roleManager = scope.ServiceProvider
-                .GetRequiredService<RoleManager<ApplicationRole>>();
+        // 2. Seed positions.
+        await SeedPositionsAsync(db);
 
-            var userManager = scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
+        // 3. Seed Identity roles.
+        await EnsureRoleAsync(roleManager, "System Admin");
+        await EnsureRoleAsync(roleManager, "Employee");
 
-            await db.Database.MigrateAsync();
+        // 4. Seed users.
+        await CreateUserAsync(
+            userManager, db, password,
+            "Admin", "User",
+            "admin@company.local",
+            "System Admin",
+            []);
 
-            // 1. Create IT Department
+        // SALES
+        await CreateUserAsync(
+            userManager, db, password,
+            "Maria", "Santos",
+            "maria.sales@company.local",
+            "Employee",
+            [new("SALES", "Account Manager", true)]);
+
+        await CreateUserAsync(
+            userManager, db, password,
+            "Pedro", "Reyes",
+            "pedro.sales@company.local",
+            "Employee",
+            [new("SALES", "Sales Officer", true)]);
+
+        // DESIGN
+        await CreateUserAsync(
+            userManager, db, password,
+            "Ana", "Cruz",
+            "ana.design@company.local",
+            "Employee",
+            [new("DESIGN", "Department Head", true)]);
+
+        await CreateUserAsync(
+            userManager, db, password,
+            "Carlo", "Garcia",
+            "carlo.design@company.local",
+            "Employee",
+            [new("DESIGN", "Design Specialist", true)]);
+
+        // IT
+        await CreateUserAsync(
+            userManager, db, password,
+            "Mark", "Dela Cruz",
+            "mark.it@company.local",
+            "Employee",
+            [new("IT", "Department Head", true)]);
+
+        await CreateUserAsync(
+            userManager, db, password,
+            "James", "Tan",
+            "james.it@company.local",
+            "Employee",
+            [new("IT", "IT Lead", true)]);
+
+        // MULTI-DEPARTMENT EMPLOYEE
+        await CreateUserAsync(
+            userManager, db, password,
+            "John", "Dela Cruz",
+            "john@company.local",
+            "Employee",
+            [
+                new("SALES", "Account Manager", false),
+                new("DESIGN", "Department Head", false),
+                new("IT", "Department Head", true)
+            ]);
+    }
+
+    // ==========================================
+    // SEED DEPARTMENTS
+    // ==========================================
+    private static async Task SeedDepartmentsAsync(
+        ApplicationDbContext db)
+    {
+        var departments = new[]
+        {
+            new DepartmentSeed("SALES", "Sales"),
+            new DepartmentSeed("DESIGN", "Design"),
+            new DepartmentSeed("IT", "Information Technology")
+        };
+
+        foreach (var item in departments)
+        {
             var department = await db.Departments
-                .FirstOrDefaultAsync(d => d.Name == "IT Department");
+                .FirstOrDefaultAsync(d => d.Code == item.Code);
 
             if (department == null)
             {
-                department = new Department
+                db.Departments.Add(new Department
                 {
-                    Name = "IT Department",
-                    Description = "Information Technology Department"
-                };
+                    Code = item.Code,
+                    Name = item.Name,
+                    IsActive = true
+                });
+            }
+            else if (!department.IsActive)
+            {
+                department.IsActive = true;
+            }
+        }
 
-                db.Departments.Add(department);
-                await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
+    }
+
+    // ==========================================
+    // SEED POSITIONS
+    // ==========================================
+    private static async Task SeedPositionsAsync(
+        ApplicationDbContext db)
+    {
+        var positions = new[]
+        {
+            new PositionSeed("SALES", "Account Manager"),
+            new PositionSeed("SALES", "Sales Officer"),
+
+            new PositionSeed("DESIGN", "Department Head"),
+            new PositionSeed("DESIGN", "Design Specialist"),
+
+            new PositionSeed("IT", "Department Head"),
+            new PositionSeed("IT", "IT Lead")
+        };
+
+        foreach (var item in positions)
+        {
+            var department = await db.Departments
+                .FirstOrDefaultAsync(d =>
+                    d.Code == item.DepartmentCode &&
+                    d.IsActive);
+
+            if (department == null)
+            {
+                throw new InvalidOperationException(
+                    $"Department '{item.DepartmentCode}' was not found.");
             }
 
-            // 2. Create Positions
-            string[] positions =
-            {
-                "System Administrator",
-                "IT Officer"
-            };
-
-            foreach (var name in positions)
-            {
-                bool exists = await db.Positions.AnyAsync(p =>
-                    p.Name == name &&
+            var position = await db.Positions
+                .FirstOrDefaultAsync(p =>
+                    p.Name == item.PositionName &&
                     p.DepartmentId == department.Id);
 
-                if (!exists)
+            if (position == null)
+            {
+                db.Positions.Add(new Position
                 {
-                    db.Positions.Add(new Position
+                    Name = item.PositionName,
+                    DepartmentId = department.Id,
+                    IsActive = true
+                });
+            }
+            else if (!position.IsActive)
+            {
+                position.IsActive = true;
+            }
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    // ==========================================
+    // ENSURE IDENTITY ROLE EXISTS
+    // ==========================================
+    private static async Task EnsureRoleAsync(
+        RoleManager<ApplicationRole> roleManager,
+        string roleName)
+    {
+        if (await roleManager.RoleExistsAsync(roleName))
+            return;
+
+        var result = await roleManager.CreateAsync(
+            new ApplicationRole
+            {
+                Name = roleName,
+                Description = $"{roleName} role"
+            });
+
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Could not create role '{roleName}': " +
+                string.Join("; ",
+                    result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    // ==========================================
+    // CREATE USER AND ASSIGN DEPARTMENT/POSITION
+    // ==========================================
+    private static async Task CreateUserAsync(
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext db,
+        string password,
+        string firstName,
+        string lastName,
+        string email,
+        string role,
+        List<SeedAssignment> assignments)
+    {
+        // Avoid duplicate accounts.
+        var existingUser = await userManager.FindByEmailAsync(email);
+
+        if (existingUser != null)
+            return;
+
+        // Validate all positions before creating the user.
+        var resolvedPositions = new List<Position>();
+
+        foreach (var item in assignments)
+        {
+            var position = await db.Positions
+                .Include(p => p.Department)
+                .FirstOrDefaultAsync(p =>
+                    p.Name == item.PositionName &&
+                    p.Department != null &&
+                    p.Department.Code == item.DepartmentCode &&
+                    p.IsActive &&
+                    p.Department.IsActive);
+
+            if (position == null)
+            {
+                throw new InvalidOperationException(
+                    $"Position '{item.PositionName}' in department " +
+                    $"'{item.DepartmentCode}' was not found or is inactive.");
+            }
+
+            resolvedPositions.Add(position);
+        }
+
+        // Create user.
+        var user = new ApplicationUser
+        {
+            FirstName = firstName,
+            LastName = lastName,
+            Email = email,
+            UserName = email,
+            EmailConfirmed = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // Create Identity user.
+        var createResult = await userManager.CreateAsync(
+            user, password);
+
+        if (!createResult.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Could not create user '{email}': " +
+                string.Join("; ",
+                    createResult.Errors.Select(e => e.Description)));
+        }
+
+        // Assign Identity role.
+        var roleResult = await userManager.AddToRoleAsync(
+            user, role);
+
+        if (!roleResult.Succeeded)
+        {
+            await userManager.DeleteAsync(user);
+
+            throw new InvalidOperationException(
+                $"Could not assign role '{role}' to '{email}': " +
+                string.Join("; ",
+                    roleResult.Errors.Select(e => e.Description)));
+        }
+
+        // Assign department and position records.
+        await using var transaction =
+            await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            for (var i = 0; i < assignments.Count; i++)
+            {
+                var item = assignments[i];
+                var position = resolvedPositions[i];
+
+                db.UserDepartmentPositions.Add(
+                    new UserDepartmentPosition
                     {
-                        Name = name,
-                        DepartmentId = department.Id
+                        UserId = user.Id,
+                        DepartmentId = position.DepartmentId,
+                        PositionId = position.Id,
+                        IsPrimary = item.IsPrimary,
+                        IsActive = true,
+                        AssignedAtUtc = DateTime.UtcNow
                     });
-                }
             }
 
             await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
 
-            // 3. Create Roles
-            var roles = new[]
-            {
-                new ApplicationRole
-                {
-                    Name = "System Admin",
-                    Description = "Full system access and configuration."
-                },
-                new ApplicationRole
-                {
-                    Name = "Administrator",
-                    Description = "Manage users and operational records."
-                },
-                new ApplicationRole
-                {
-                    Name = "Manager",
-                    Description = "Manage assigned department operations."
-                },
-                new ApplicationRole
-                {
-                    Name = "Staff",
-                    Description = "Standard employee access."
-                },
-                new ApplicationRole
-                {
-                    Name = "User",
-                    Description = "Basic system access."
-                }
-            };
+            // Remove the user if assignment creation fails.
+            await userManager.DeleteAsync(user);
 
-            foreach (var role in roles)
-            {
-                if (!await roleManager.RoleExistsAsync(role.Name!))
-                {
-                    await roleManager.CreateAsync(role);
-                }
-            }
-
-            var configuration = scope.ServiceProvider
-                .GetRequiredService<IConfiguration>();
-
-            var adminEmail = configuration["BootstrapAdmin:Email"];
-            var adminPassword = configuration["BootstrapAdmin:Password"];
-
-            if (!string.IsNullOrWhiteSpace(adminEmail) &&
-                !string.IsNullOrWhiteSpace(adminPassword))
-            {
-                var admin = await userManager.FindByEmailAsync(adminEmail);
-
-                if (admin == null)
-                {
-                    admin = new ApplicationUser
-                    {
-                        UserName = adminEmail,
-                        Email = adminEmail,
-                        EmailConfirmed = true,
-                        FirstName = "System",
-                        LastName = "Administrator",
-                        IsActive = true,
-                        LockoutEnabled = true
-                    };
-
-                    var createResult = await userManager.CreateAsync(
-                        admin,
-                        adminPassword);
-
-                    if (!createResult.Succeeded)
-                    {
-                        throw new Exception(
-                            "Unable to create bootstrap administrator: " +
-                            string.Join("; ", createResult.Errors.Select(e => e.Description)));
-                    }
-                }
-
-                if (!await userManager.IsInRoleAsync(admin, "System Admin"))
-                {
-                    var roleResult = await userManager.AddToRoleAsync(
-                        admin,
-                        "System Admin");
-
-                    if (!roleResult.Succeeded)
-                    {
-                        throw new Exception(
-                            "Unable to assign System Admin role: " +
-                            string.Join("; ", roleResult.Errors.Select(e => e.Description)));
-                    }
-                }
-            }
+            throw;
         }
     }
+
+    // ==========================================
+    // SEED MODELS
+    // ==========================================
+    private record DepartmentSeed(
+        string Code,
+        string Name);
+
+    private record PositionSeed(
+        string DepartmentCode,
+        string PositionName);
+
+    private record SeedAssignment(
+        string DepartmentCode,
+        string PositionName,
+        bool IsPrimary);
 }

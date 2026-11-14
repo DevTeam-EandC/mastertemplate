@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="IT Department Head Dashboard"
                 description="Monitor IT operations, employees, and requests."
                 cards={[
-                    { title: "IT Employees", value: 0 },
-                    { title: "IT Requests", value: 0 },
-                    { title: "Pending Tasks", value: 0 },
-                    { title: "Equipment Records", value: 0 },
+                    { key: "itEmployees", title: "IT Employees" },
+                    { key: "itRequests", title: "IT Requests" },
+                    { key: "pendingTasks", title: "Pending Tasks" },
+                    { key: "equipmentRecords", title: "Equipment Records" },
                 ]}
             />
         </DashboardLayout>

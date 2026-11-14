@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="IT Lead Dashboard"
                 description="Manage technical tasks and IT team activities."
                 cards={[
-                    { title: "Team Tasks", value: 0 },
-                    { title: "Technical Requests", value: 0 },
-                    { title: "System Issues", value: 0 },
-                    { title: "Pending Assignments", value: 0 },
+                    { key: "teamTasks", title: "Team Tasks" },
+                    { key: "technicalRequests", title: "Technical Requests" },
+                    { key: "systemIssues", title: "System Issues" },
+                    { key: "pendingAssignments", title: "Pending Assignments" },
                 ]}
             />
         </DashboardLayout>

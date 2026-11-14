@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="Design Specialist Dashboard"
                 description="Manage assigned design projects and tasks."
                 cards={[
-                    { title: "My Projects", value: 0 },
-                    { title: "My Tasks", value: 0 },
-                    { title: "Pending Revisions", value: 0 },
-                    { title: "Completed Designs", value: 0 },
+                    { key: "myProjects", title: "My Projects" },
+                    { key: "myTasks", title: "My Tasks" },
+                    { key: "pendingRevisions", title: "Pending Revisions" },
+                    { key: "completedDesigns", title: "Completed Designs" },
                 ]}
             />
         </DashboardLayout>

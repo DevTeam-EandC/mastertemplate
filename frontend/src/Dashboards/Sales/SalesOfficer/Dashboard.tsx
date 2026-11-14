@@ -9,10 +9,10 @@ export default function Dashboard() {
                 title="Sales Officer Dashboard"
                 description="Manage daily sales activities and customer follow-ups."
                 cards={[
-                    { title: "My Activities", value: 0 },
-                    { title: "Customer Follow-ups", value: 0 },
-                    { title: "Sales Records", value: 0 },
-                    { title: "Pending Tasks", value: 0 },
+                    { key: "myActivities", title: "My Activities" },
+                    { key: "customerFollowUps", title: "Customer Follow-ups" },
+                    { key: "salesRecords", title: "Sales Records" },
+                    { key: "pendingTasks", title: "Pending Tasks" },
                 ]}
             />
         </DashboardLayout>

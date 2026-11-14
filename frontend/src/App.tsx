@@ -1,40 +1,114 @@
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, type ComponentType } from "react";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+    Navigate,
+} from "react-router-dom";
+
+import { useAuth } from "./auth/AuthContext";
+import RequireAuth from "./auth/RequireAuth";
+
+import Login from "./pages/Login/Login";
+import DashboardSelection from "./pages/DashboardSelection/DashboardSelection";
+import DashboardSection from "./pages/DashboardSection";
+
 import { dashboardRoutes } from "./config/dashboardRoutes";
 
-function App() {
+export function AuthorizedDashboard({
+    routeKey,
+    component: Dashboard,
+}: {
+    routeKey: string;
+    component: ComponentType;
+}) {
+    const {
+        dashboards,
+        activeDashboard,
+        switchDashboard,
+    } = useAuth();
+
+    const assignment = dashboards.find(
+        (dashboard) => dashboard.dashboardKey === routeKey
+    );
+
+    useEffect(() => {
+        if (
+            assignment &&
+            activeDashboard?.dashboardKey !== assignment.dashboardKey
+        ) {
+            switchDashboard(assignment);
+        }
+    }, [
+        assignment?.dashboardKey,
+        assignment?.departmentId,
+        assignment?.positionId,
+        activeDashboard?.dashboardKey,
+        switchDashboard,
+    ]);
+
+    if (!assignment) {
+        return <Navigate to="/select-dashboard" replace />;
+    }
+
+    return <Dashboard />;
+}
+
+function AppRoutes() {
     return (
-        <BrowserRouter>
-            <Routes>
-                {dashboardRoutes.map((route) => {
-                    const Dashboard = route.component;
+        <Routes>
+            {/* Public login */}
+            <Route path="/login" element={<Login />} />
 
-                    return (
-                        <Route
-                            key={route.key}
-                            path={`/${route.path}/dashboard`}
-                            element={<Dashboard />}
-                        />
-                    );
-                })}
-
+            {/* Protected pages */}
+            <Route element={<RequireAuth />}>
+                {/* Dashboard selector */}
                 <Route
-                    path="/"
-                    element={
-                        <Navigate
-                            to="/Sales/AccountManager/dashboard"
-                            replace
-                        />
-                    }
+                    path="/select-dashboard"
+                    element={<DashboardSelection />}
                 />
 
+                {/* No dashboard assigned */}
                 <Route
-                    path="*"
-                    element={<div className="p-10 text-center">Page not found</div>}
+                    path="/no-dashboard"
+                    element={<div>No dashboard assigned. Please contact your administrator.</div>}
                 />
-            </Routes>
-        </BrowserRouter>
+
+                {/* Position-specific dashboards */}
+                {dashboardRoutes.map((route) => (
+                    <Route
+                        key={route.key}
+                        path={`/${route.path}/dashboard`}
+                        element={
+                            <AuthorizedDashboard
+                                routeKey={route.key}
+                                component={route.component}
+                            />
+                        }
+                    />
+                ))}
+
+                {/* Dashboard section pages */}
+                <Route
+                    path="/:department/:position/:page"
+                    element={<DashboardSection />}
+                />
+            </Route>
+
+            {/* Unknown URL */}
+            <Route
+                path="*"
+                element={<Navigate to="/login" replace />}
+            />
+        </Routes>
     );
 }
 
-export default App;
+export default function App() {
+    return (
+        <BrowserRouter>
+            <AppRoutes />
+        </BrowserRouter>
+    );
+}

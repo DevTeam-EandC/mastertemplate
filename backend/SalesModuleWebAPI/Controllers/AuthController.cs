@@ -1,321 +1,391 @@
 
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
 using SalesModuleWebAPI.Configurations;
 using SalesModuleWebAPI.Data;
-using SalesModuleWebAPI.DTOs;
 using SalesModuleWebAPI.DTOs.Auth;
 using SalesModuleWebAPI.Models;
 using SalesModuleWebAPI.Services;
-using System.Security.Claims;
 
-namespace SalesModuleWebAPI.Controllers
+namespace SalesModuleWebAPI.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
-    {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ApplicationDbContext _context;
-        private readonly TokenService _tokenService;
-        private readonly JwtOptions _jwtOptions;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ApplicationDbContext _context;
+    private readonly TokenService _tokenService;
+    private readonly JwtOptions _jwtOptions;
+    private readonly ILogger<AuthController> _logger;
 
-        public AuthController(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ApplicationDbContext context,
-            TokenService tokenService,
-            IOptions<JwtOptions> jwtOptions)
+    public AuthController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        ApplicationDbContext context,
+        TokenService tokenService,
+        IOptions<JwtOptions> jwtOptions,
+        ILogger<AuthController> logger)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _context = context;
+        _tokenService = tokenService;
+        _jwtOptions = jwtOptions.Value;
+        _logger = logger;
+    }
+
+    // ==========================================
+    // LOGIN
+    // POST: api/Auth/login
+    // ==========================================
+
+    [AllowAnonymous]
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequestDto request)
+    {
+        if (request == null ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _context = context;
-            _tokenService = tokenService;
-            _jwtOptions = jwtOptions.Value;
+            return BadRequest(new
+            {
+                message = "Email and password are required."
+            });
         }
 
-        // ==========================================
-        // LOGIN
-        // ==========================================
+        var email = request.Email.Trim();
 
-        [AllowAnonymous]
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(
-            [FromBody] LoginRequestDto request)
+        var user = await _userManager.FindByEmailAsync(email);
+
+        if (user == null)
         {
-            if (request == null ||
-                string.IsNullOrWhiteSpace(request.Email) ||
-                string.IsNullOrWhiteSpace(request.Password))
+            _logger.LogWarning(
+                "Login failed: account not found for {Email}", email);
+
+            return Unauthorized(new
             {
-                return BadRequest(new
-                {
-                    message = "Email and password are required."
-                });
-            }
+                message = "Invalid email or password."
+            });
+        }
 
-            var user = await _userManager.FindByEmailAsync(
-                request.Email.Trim());
+        if (!user.IsActive)
+        {
+            _logger.LogWarning(
+                "Login failed: inactive account {Email}", email);
 
-            if (user == null || !user.IsActive)
+            return Unauthorized(new
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid email or password."
-                });
-            }
+                message = "This account is inactive. Contact your administrator."
+            });
+        }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(
+        var passwordResult =
+            await _signInManager.CheckPasswordSignInAsync(
                 user,
                 request.Password,
                 lockoutOnFailure: true);
 
-            if (!result.Succeeded)
+        if (passwordResult.IsLockedOut)
+        {
+            return Unauthorized(new
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid email or password."
-                });
-            }
-
-            var response = await CreateAuthResponseAsync(user);
-
-            return Ok(response);
+                message = "Your account is temporarily locked. Please try again later."
+            });
         }
 
-        // ==========================================
-        // REFRESH TOKEN
-        // ==========================================
-
-        [AllowAnonymous]
-        [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh(
-            [FromBody] RefreshTokenRequestDto request)
+        if (passwordResult.IsNotAllowed)
         {
-            if (request == null ||
-                string.IsNullOrWhiteSpace(request.RefreshToken))
+            _logger.LogWarning(
+                "Login not allowed for {Email}. Check Identity sign-in requirements.",
+                email);
+
+            return Unauthorized(new
             {
-                return BadRequest(new
-                {
-                    message = "Refresh token is required."
-                });
-            }
+                message = "Login is not allowed. Check whether your account is confirmed."
+            });
+        }
 
-            var tokenHash = _tokenService.HashRefreshToken(
-                request.RefreshToken);
+        if (!passwordResult.Succeeded)
+        {
+            _logger.LogWarning(
+                "Login failed: password verification failed for {Email}", email);
 
-            var storedToken = await _context.RefreshTokens
-                .Include(x => x.User)
-                .FirstOrDefaultAsync(
-                    x => x.TokenHash == tokenHash);
-
-            if (storedToken == null ||
-                storedToken.RevokedAtUtc != null ||
-                storedToken.ExpiresAtUtc <= DateTime.UtcNow ||
-                storedToken.User == null ||
-                !storedToken.User.IsActive)
+            return Unauthorized(new
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid or expired refresh token."
-                });
-            }
+                message = "Invalid email or password."
+            });
+        }
 
-            var user = storedToken.User;
+        var response = await CreateAuthResponseAsync(user);
 
-            // Revoke previous refresh token.
+        return Ok(response);
+    }
+
+    // ==========================================
+    // REFRESH TOKEN
+    // POST: api/Auth/refresh
+    // ==========================================
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(
+        [FromBody] RefreshTokenRequestDto request)
+    {
+        if (request == null ||
+            string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new
+            {
+                message = "Refresh token is required."
+            });
+        }
+
+        var tokenHash = _tokenService.HashRefreshToken(
+            request.RefreshToken);
+
+        var storedToken = await _context.RefreshTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
+
+        if (storedToken == null ||
+            storedToken.RevokedAtUtc != null ||
+            storedToken.ExpiresAtUtc <= DateTime.UtcNow ||
+            storedToken.User == null ||
+            !storedToken.User.IsActive)
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid or expired refresh token."
+            });
+        }
+
+        var user = storedToken.User;
+
+        // Revoke the previous refresh token.
+        storedToken.RevokedAtUtc = DateTime.UtcNow;
+
+        // Create a replacement token pair.
+        // SaveChangesAsync inside this method persists the revocation
+        // and the new refresh token together.
+        var response = await CreateAuthResponseAsync(user);
+
+        return Ok(response);
+    }
+
+    // ==========================================
+    // LOGOUT
+    // POST: api/Auth/logout
+    // ==========================================
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(
+        [FromBody] RefreshTokenRequestDto request)
+    {
+        if (request == null ||
+            string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new
+            {
+                message = "Refresh token is required."
+            });
+        }
+
+        var userIdValue = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdValue, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var tokenHash = _tokenService.HashRefreshToken(
+            request.RefreshToken);
+
+        var storedToken = await _context.RefreshTokens
+            .FirstOrDefaultAsync(x =>
+                x.TokenHash == tokenHash &&
+                x.UserId == userId);
+
+        if (storedToken != null &&
+            storedToken.RevokedAtUtc == null)
+        {
             storedToken.RevokedAtUtc = DateTime.UtcNow;
 
-            // Create replacement access and refresh tokens.
-            var response = await CreateAuthResponseAsync(user);
-
-            return Ok(response);
-        }
-
-        // ==========================================
-        // LOGOUT
-        // ==========================================
-
-        [Authorize]
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout(
-            [FromBody] RefreshTokenRequestDto request)
-        {
-            if (request == null ||
-                string.IsNullOrWhiteSpace(request.RefreshToken))
-            {
-                return BadRequest(new
-                {
-                    message = "Refresh token is required."
-                });
-            }
-
-            var userId = User.FindFirstValue(
-                ClaimTypes.NameIdentifier);
-
-            if (!Guid.TryParse(userId, out var parsedUserId))
-            {
-                return Unauthorized();
-            }
-
-            var tokenHash = _tokenService.HashRefreshToken(
-                request.RefreshToken);
-
-            var storedToken = await _context.RefreshTokens
-                .FirstOrDefaultAsync(x =>
-                    x.TokenHash == tokenHash &&
-                    x.UserId == parsedUserId);
-
-            if (storedToken != null &&
-                storedToken.RevokedAtUtc == null)
-            {
-                storedToken.RevokedAtUtc = DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new
-            {
-                message = "Logged out successfully."
-            });
-        }
-
-        // ==========================================
-        // CREATE AUTH RESPONSE
-        // ==========================================
-
-        private async Task<AuthResponseDto> CreateAuthResponseAsync(
-            ApplicationUser user)
-        {
-            var accessToken = await _tokenService
-                .GenerateAccessTokenAsync(user);
-
-            var refreshToken = _tokenService
-                .GenerateRefreshToken();
-
-            var refreshTokenExpires = DateTime.UtcNow.AddDays(
-                _jwtOptions.RefreshTokenDays);
-
-            _context.RefreshTokens.Add(new RefreshToken
-            {
-                UserId = user.Id,
-
-                TokenHash = _tokenService.HashRefreshToken(
-                    refreshToken),
-
-                ExpiresAtUtc = refreshTokenExpires
-            });
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var dashboards = await GetUserDashboardsAsync(user.Id);
-
             await _context.SaveChangesAsync();
-
-            return new AuthResponseDto
-            {
-                AccessToken = accessToken,
-
-                AccessTokenExpiresAtUtc =
-                    DateTime.UtcNow.AddMinutes(
-                        _jwtOptions.AccessTokenMinutes),
-
-                RefreshToken = refreshToken,
-
-                RefreshTokenExpiresAtUtc = refreshTokenExpires,
-
-                FullName =
-                    $"{user.FirstName} {user.LastName}".Trim(),
-
-                Email = user.Email ?? string.Empty,
-
-                Roles = roles.ToList(),
-
-                Dashboards = dashboards
-            };
         }
 
-        // ==========================================
-        // GET USER DASHBOARDS
-        // ==========================================
-
-        private async Task<List<DashboardAssignmentDto>>
-            GetUserDashboardsAsync(Guid userId)
+        return Ok(new
         {
-            var assignments = await _context.UserDepartmentPositions
-                .Include(a => a.Department)
-                .Include(a => a.Position)
-                .Where(a =>
-                    a.UserId == userId &&
-                    a.IsActive &&
-                    a.Department != null &&
-                    a.Department.IsActive &&
-                    a.Position != null &&
-                    a.Position.IsActive)
-                .OrderByDescending(a => a.IsPrimary)
-                .ThenBy(a => a.Department!.Name)
-                .ThenBy(a => a.Position!.Name)
-                .ToListAsync();
+            message = "Logged out successfully."
+        });
+    }
 
-            return assignments.Select(a =>
-                new DashboardAssignmentDto
-                {
-                    DepartmentId = a.DepartmentId,
+    // ==========================================
+    // CREATE AUTH RESPONSE
+    // ==========================================
 
-                    DepartmentCode = a.Department!.Code,
+    private async Task<object> CreateAuthResponseAsync(
+        ApplicationUser user)
+    {
+        var accessToken = await _tokenService
+            .GenerateAccessTokenAsync(user);
 
-                    DepartmentName = a.Department.Name,
+        var refreshToken = _tokenService
+            .GenerateRefreshToken();
 
-                    PositionId = a.PositionId,
+        var now = DateTime.UtcNow;
 
-                    PositionName = a.Position!.Name,
+        var accessTokenExpiresAtUtc =
+            now.AddMinutes(_jwtOptions.AccessTokenMinutes);
 
-                    DashboardKey = GetDepartmentSlug(
-                        a.Department.Code) + "/" +
-                        GetPositionSlug(a.Position.Name),
+        var refreshTokenExpiresAtUtc =
+            now.AddDays(_jwtOptions.RefreshTokenDays);
 
-                    IsPrimary = a.IsPrimary
-
-                }).ToList();
-        }
-
-        // ==========================================
-        // DEPARTMENT ROUTE MAPPING
-        // ==========================================
-
-        private static string GetDepartmentSlug(string code)
+        _context.RefreshTokens.Add(new RefreshToken
         {
-            return code.Trim().ToUpperInvariant() switch
-            {
-                "SALES" => "Sales",
-                "DESIGN" => "Design",
-                "IT" => "IT",
-                _ => throw new InvalidOperationException(
-                    $"No dashboard route configured for department: {code}")
-            };
-        }
+            UserId = user.Id,
 
-        // ==========================================
-        // POSITION ROUTE MAPPING
-        // ==========================================
+            TokenHash = _tokenService.HashRefreshToken(
+                refreshToken),
 
-        private static string GetPositionSlug(string positionName)
+            ExpiresAtUtc = refreshTokenExpiresAtUtc,
+
+            CreatedAtUtc = now
+        });
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var dashboards = await GetUserDashboardsAsync(user.Id);
+
+        await _context.SaveChangesAsync();
+
+        // Response matches the React LoginResponse interface.
+        return new
         {
-            return positionName.Trim().ToLowerInvariant() switch
-            {
-                "account manager" => "accountmanager",
-                "sales officer" => "salesofficer",
-                "department head" => "departmenthead",
-                "design specialist" => "designspecialist",
-                "it lead" => "itlead",
-                "it staff" => "itstaff",
+            accessToken,
 
-                _ => throw new InvalidOperationException(
-                    $"No dashboard route configured for position: {positionName}")
+            refreshToken,
+
+            expiresAtUtc = accessTokenExpiresAtUtc,
+
+            user = new
+            {
+                id = user.Id,
+                firstName = user.FirstName,
+                lastName = user.LastName,
+                email = user.Email ?? string.Empty
+            },
+
+            roles,
+
+            dashboards
+        };
+    }
+
+    // ==========================================
+    // GET USER DASHBOARDS
+    // ==========================================
+
+    private async Task<List<DashboardAssignmentDto>>
+        GetUserDashboardsAsync(Guid userId)
+    {
+        var assignments = await _context.UserDepartmentPositions
+            .AsNoTracking()
+            .Include(a => a.Department)
+            .Include(a => a.Position)
+            .Where(a =>
+                a.UserId == userId &&
+                a.IsActive &&
+                a.Department != null &&
+                a.Department.IsActive &&
+                a.Position != null &&
+                a.Position.IsActive)
+            .OrderByDescending(a => a.IsPrimary)
+            .ThenBy(a => a.Department!.Name)
+            .ThenBy(a => a.Position!.Name)
+            .ToListAsync();
+
+        return assignments.Select(a =>
+        {
+            var departmentCode = a.Department!.Code;
+            var positionName = a.Position!.Name;
+
+            return new DashboardAssignmentDto
+            {
+                DepartmentId = a.DepartmentId,
+
+                DepartmentCode = departmentCode,
+
+                DepartmentName = a.Department.Name,
+
+                PositionId = a.PositionId,
+
+                PositionName = positionName,
+
+                DashboardKey = GetDepartmentSlug(departmentCode)
+                    + "/"
+                    + GetPositionSlug(positionName),
+
+                IsPrimary = a.IsPrimary
             };
-        }
+        }).ToList();
+    }
+
+    // ==========================================
+    // DEPARTMENT ROUTE MAPPING
+    // ==========================================
+
+    private static string GetDepartmentSlug(string code)
+    {
+        return code.Trim().ToUpperInvariant() switch
+        {
+            "SALES" => "Sales",
+            "DESIGN" => "Design",
+            "IT" => "IT",
+            "CSR" => "CSR",
+            "MKT" => "Marketing",
+            "EXEC" => "Executive",
+            "PUR" => "Purchasing",
+            "PMS" => "PMS",
+            "ACC" => "Accounting",
+            "INST" => "Installation",
+
+            // Keep unknown department codes from breaking login.
+            _ => code.Trim().ToUpperInvariant()
+        };
+    }
+
+    // ==========================================
+    // POSITION ROUTE MAPPING
+    // ==========================================
+
+    private static string GetPositionSlug(string positionName)
+    {
+        return positionName.Trim().ToLowerInvariant() switch
+        {
+            "account manager" => "AccountManager",
+            "sales officer" => "SalesOfficer",
+            "department head" => "DepartmentHead",
+            "design specialist" => "DesignSpecialist",
+            "it lead" => "ITLead",
+            "it staff" => "ITStaff",
+
+            // Generic fallback for positions without a custom mapping.
+            _ => string.Concat(
+                positionName
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(word =>
+                        char.ToUpperInvariant(word[0]) +
+                        word.Substring(1)))
+        };
     }
 }
