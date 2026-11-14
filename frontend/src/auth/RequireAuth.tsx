@@ -1,8 +1,15 @@
-
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
-export default function RequireAuth() {
+interface RequireAuthProps {
+    children?: React.ReactNode;
+    requiredRole?: string;
+}
+
+export default function RequireAuth({
+    children,
+    requiredRole,
+}: RequireAuthProps) {
     const { user, loading } = useAuth();
 
     if (loading) {
@@ -17,5 +24,9 @@ export default function RequireAuth() {
         return <Navigate to="/login" replace />;
     }
 
-    return <Outlet />;
+    if (requiredRole && !user.roles?.includes(requiredRole)) {
+        return <Navigate to="/no-dashboard" replace />;
+    }
+
+    return children ? <>{children}</> : <Outlet />;
 }

@@ -14,6 +14,9 @@ import Login from "./pages/Login/Login";
 import DashboardSelection from "./pages/DashboardSelection/DashboardSelection";
 import DashboardSection from "./pages/DashboardSection";
 
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import UserManagement from "./pages/Admin/UserManagement";
+
 import { dashboardRoutes } from "./config/dashboardRoutes";
 
 export function AuthorizedDashboard({
@@ -58,24 +61,48 @@ export function AuthorizedDashboard({
 function AppRoutes() {
     return (
         <Routes>
-            {/* Public login */}
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected pages */}
+            {/* Authenticated Routes */}
             <Route element={<RequireAuth />}>
-                {/* Dashboard selector */}
+
                 <Route
                     path="/select-dashboard"
                     element={<DashboardSelection />}
                 />
 
-                {/* No dashboard assigned */}
                 <Route
                     path="/no-dashboard"
-                    element={<div>No dashboard assigned. Please contact your administrator.</div>}
+                    element={
+                        <div className="flex min-h-screen items-center justify-center">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-slate-800">
+                                    No Dashboard Assigned
+                                </h1>
+
+                                <p className="mt-2 text-slate-500">
+                                    Please contact your administrator.
+                                </p>
+                            </div>
+                        </div>
+                    }
                 />
 
-                {/* Position-specific dashboards */}
+                {/* Admin Routes */}
+                <Route path="/admin">
+                    <Route
+                        path="dashboard"
+                        element={<AdminDashboard />}
+                    />
+
+                    <Route
+                        path="users"
+                        element={<UserManagement />}
+                    />
+                </Route>
+
+                {/* Position-Specific Dashboards */}
                 {dashboardRoutes.map((route) => (
                     <Route
                         key={route.key}
@@ -89,11 +116,12 @@ function AppRoutes() {
                     />
                 ))}
 
-                {/* Dashboard section pages */}
+                {/* Dashboard Section Pages */}
                 <Route
                     path="/:department/:position/:page"
                     element={<DashboardSection />}
                 />
+
             </Route>
 
             {/* Unknown URL */}

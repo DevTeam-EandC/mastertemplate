@@ -1,4 +1,3 @@
-
 import {
     createContext,
     useCallback,
@@ -10,6 +9,7 @@ import {
 } from "react";
 
 import api from "../api/api";
+
 import type {
     AuthContextType,
     DashboardAssignment,
@@ -28,16 +28,14 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<LoginUser | null>(null);
 
-    const [dashboards, setDashboards] = useState<
-        DashboardAssignment[]
-    >([]);
+    const [dashboards, setDashboards] = useState<DashboardAssignment[]>([]);
 
     const [activeDashboard, setActiveDashboard] =
         useState<DashboardAssignment | null>(null);
 
     const [loading, setLoading] = useState(true);
 
-    // Restore login information after a page refresh.
+    // Restore login information after page refresh.
     useEffect(() => {
         try {
             const savedUser = localStorage.getItem("user");
@@ -74,7 +72,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 }
             }
         } catch {
-            localStorage.clear();
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+            localStorage.removeItem("dashboards");
+            localStorage.removeItem("activeDashboard");
         } finally {
             setLoading(false);
         }
@@ -92,9 +94,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const data = response.data;
 
+        // Include roles inside the authenticated user.
+        const authenticatedUser: LoginUser = {
+            ...data.user,
+            roles: data.roles ?? [],
+        };
+
+        // Save authentication information.
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
-        localStorage.setItem("user", JSON.stringify(data.user));
+
+        localStorage.setItem(
+            "user",
+            JSON.stringify(authenticatedUser)
+        );
+
         localStorage.setItem(
             "dashboards",
             JSON.stringify(data.dashboards)
@@ -102,7 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         localStorage.removeItem("activeDashboard");
 
-        setUser(data.user);
+        setUser(authenticatedUser);
         setDashboards(data.dashboards);
         setActiveDashboard(null);
 
@@ -135,6 +149,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         [dashboards]
     );
 
+    // Logout.
     const logout = useCallback(() => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");

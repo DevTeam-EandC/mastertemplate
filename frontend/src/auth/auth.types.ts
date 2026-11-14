@@ -1,9 +1,9 @@
-
 export interface LoginUser {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
+    roles: string[];
 }
 
 export interface DashboardAssignment {
@@ -21,6 +21,7 @@ export interface LoginResponse {
     refreshToken: string;
     expiresAtUtc: string;
     user: LoginUser;
+    roles: string[];
     dashboards: DashboardAssignment[];
 }
 
@@ -34,12 +35,7 @@ export interface AuthContextType {
     dashboards: DashboardAssignment[];
     activeDashboard: DashboardAssignment | null;
     loading: boolean;
-    login: (
-        email: string,
-        password: string
-    ) => Promise<LoginResponse>;
-    switchDashboard: (
-        dashboard: DashboardAssignment
-    ) => boolean;
+    login: (email: string, password: string) => Promise<LoginResponse>;
+    switchDashboard: (dashboard: DashboardAssignment) => boolean;
     logout: () => void;
 }

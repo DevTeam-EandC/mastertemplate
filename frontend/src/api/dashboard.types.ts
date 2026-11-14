@@ -29,3 +29,15 @@ export interface LoginRequest {
     email: string;
     password: string;
 }
+export interface DashboardSummaryResponse {
+    metrics: Record<string, number>;
+
+    recentActivities: RecentActivity[];
+}
+
+export interface RecentActivity {
+    id: string;
+    title: string;
+    description: string;
+    createdAtUtc: string;
+}

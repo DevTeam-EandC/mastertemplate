@@ -24,32 +24,33 @@ export default function Login() {
         try {
             const result = await login(email, password);
 
+            // 1. System Admin goes directly to Admin Dashboard
+            if (result.roles.includes("System Admin")) {
+                navigate("/admin/dashboard", { replace: true });
+                return;
+            }
+            // 2. No available dashboards
             if (result.dashboards.length === 0) {
                 navigate("/no-dashboard", { replace: true });
                 return;
             }
 
-            if (result.dashboards.length === 1) {
-                const primaryDashboard = result.dashboards[0];
-
-                switchDashboard(primaryDashboard);
-
-                navigate(
-                    `/${primaryDashboard.dashboardKey}/dashboard`,
-                    { replace: true }
-                );
-
+            // 3. Multiple dashboards: let user choose
+            if (result.dashboards.length > 1) {
+                navigate("/select-dashboard", { replace: true });
                 return;
             }
 
-            navigate("/select-dashboard", { replace: true });
-
+            // 4. Only one dashboard: go directly to it
             const primaryDashboard = result.dashboards[0];
+
+            switchDashboard(primaryDashboard);
 
             navigate(
                 `/${primaryDashboard.dashboardKey}/dashboard`,
                 { replace: true }
             );
+
         } catch (err) {
             if (axios.isAxiosError(err)) {
                 setError(
@@ -67,6 +68,7 @@ export default function Login() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-600 text-white">
                         <LockKeyhole size={28} />
@@ -82,6 +84,7 @@ export default function Login() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
+
                     <div>
                         <label className="mb-2 block text-sm font-medium text-slate-700">
                             Email Address
@@ -134,6 +137,7 @@ export default function Login() {
                 <p className="mt-6 text-center text-xs text-slate-400">
                     Authorized company personnel only.
                 </p>
+
             </div>
         </div>
     );

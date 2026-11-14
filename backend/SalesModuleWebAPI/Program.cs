@@ -5,10 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+
 using SalesModuleWebAPI.Configurations;
 using SalesModuleWebAPI.Data;
 using SalesModuleWebAPI.Models;
 using SalesModuleWebAPI.Services;
+
 using System.Security.Claims;
 using System.Text;
 
@@ -22,28 +24,36 @@ builder.Services.AddControllers();
 // ==========================================
 // 2. DATABASE CONFIGURATION
 // ==========================================
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Database connection string 'DefaultConnection' is missing.");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"))
-    .ConfigureWarnings(w =>
-        w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+{
+    options.UseNpgsql(connectionString);
+
+    options.ConfigureWarnings(w =>
+        w.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 // ==========================================
 // 3. ASP.NET CORE IDENTITY
 // ==========================================
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
-    // Password requirements
     options.Password.RequiredLength = 8;
     options.Password.RequireDigit = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
 
-    // User requirements
     options.User.RequireUniqueEmail = true;
 
-    // Account lockout
     options.Lockout.AllowedForNewUsers = true;
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan =
@@ -53,22 +63,15 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddDefaultTokenProviders();
 
 // ==========================================
-// 4. AUTHORIZATION
-// ==========================================
-builder.Services.AddAuthorization();
-
-// ==========================================
-// 5. JWT CONFIGURATION
+// 4. JWT CONFIGURATION
 // ==========================================
 var jwtSection = builder.Configuration.GetSection("Jwt");
-
-builder.Services.Configure<JwtOptions>(jwtSection);
 
 var jwtOptions = jwtSection.Get<JwtOptions>()
     ?? throw new InvalidOperationException(
         "JWT configuration is missing.");
 
-var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtKey = jwtSection["Key"];
 
 if (string.IsNullOrWhiteSpace(jwtKey) ||
     Encoding.UTF8.GetByteCount(jwtKey) < 32)
@@ -77,10 +80,19 @@ if (string.IsNullOrWhiteSpace(jwtKey) ||
         "JWT signing key must contain at least 32 bytes.");
 }
 
+if (string.IsNullOrWhiteSpace(jwtOptions.Issuer) ||
+    string.IsNullOrWhiteSpace(jwtOptions.Audience))
+{
+    throw new InvalidOperationException(
+        "JWT Issuer or Audience configuration is missing.");
+}
+
 jwtOptions.Key = jwtKey;
 
+builder.Services.Configure<JwtOptions>(jwtSection);
+
 // ==========================================
-// 6. AUTHENTICATION
+// 5. AUTHENTICATION
 // ==========================================
 builder.Services.AddAuthentication(options =>
 {
@@ -115,21 +127,28 @@ builder.Services.AddAuthentication(options =>
             RoleClaimType = ClaimTypes.Role
         };
 
-    // Validate user status and security stamp.
     options.Events = new JwtBearerEvents
     {
         OnTokenValidated = async context =>
         {
-            var userIdValue = context.Principal?
+            var principal = context.Principal;
+
+            var userIdValue = principal?
                 .FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var securityStamp = context.Principal?
+            var securityStamp = principal?
                 .FindFirstValue("security_stamp");
 
             if (string.IsNullOrWhiteSpace(userIdValue) ||
                 !Guid.TryParse(userIdValue, out var userId))
             {
                 context.Fail("Invalid user token.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(securityStamp))
+            {
+                context.Fail("Token security stamp is missing.");
                 return;
             }
 
@@ -141,8 +160,10 @@ builder.Services.AddAuthentication(options =>
 
             if (user is null ||
                 !user.IsActive ||
-                string.IsNullOrWhiteSpace(securityStamp) ||
-                user.SecurityStamp != securityStamp)
+                !string.Equals(
+                    user.SecurityStamp,
+                    securityStamp,
+                    StringComparison.Ordinal))
             {
                 context.Fail(
                     "User is inactive or token is invalid.");
@@ -152,12 +173,24 @@ builder.Services.AddAuthentication(options =>
 });
 
 // ==========================================
+// 6. AUTHORIZATION
+// ==========================================
+builder.Services.AddAuthorization();
+
+// ==========================================
 // 7. SWAGGER CONFIGURATION
 // ==========================================
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Sales Module API",
+        Version = "v1",
+        Description = "Company Management System API"
+    });
+
     options.AddSecurityDefinition("Bearer",
         new OpenApiSecurityScheme
         {
@@ -174,7 +207,9 @@ builder.Services.AddSwaggerGen(options =>
         {
             {
                 new OpenApiSecuritySchemeReference(
-                    "Bearer", document, null),
+                    "Bearer",
+                    document,
+                    null),
                 new List<string>()
             }
         });
@@ -192,7 +227,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "https://localhost:5173"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -204,14 +244,29 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ==========================================
-// 11. DATABASE INITIALIZATION
+// 11. SWAGGER MIDDLEWARE
 // ==========================================
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
 
-// Apply pending database migrations.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "Sales Module API V1");
+
+        options.RoutePrefix = "swagger";
+    });
+}
+
+// ==========================================
+// 12. DATABASE INITIALIZATION
+// ==========================================
 await DbSeeder.SeedAsync(app.Services);
 
 // ==========================================
-// 12. DEVELOPMENT CONFIGURATION
+// 13. DEVELOPMENT SAMPLE DATA
 // ==========================================
 if (app.Environment.IsDevelopment())
 {
@@ -231,7 +286,8 @@ if (app.Environment.IsDevelopment())
 
     if (user != null && !string.IsNullOrWhiteSpace(password))
     {
-        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var token = await userManager
+            .GeneratePasswordResetTokenAsync(user);
 
         var result = await userManager.ResetPasswordAsync(
             user,
@@ -240,17 +296,19 @@ if (app.Environment.IsDevelopment())
 
         if (!result.Succeeded)
         {
-            throw new Exception(string.Join(
-                "; ",
-                result.Errors.Select(e => e.Description)));
+            throw new InvalidOperationException(
+                string.Join(
+                    "; ",
+                    result.Errors.Select(e => e.Description)));
         }
 
-        Console.WriteLine($"Sample password reset for {email}");
+        Console.WriteLine(
+            $"Sample password reset for {email}");
     }
 }
 
 // ==========================================
-// 13. MIDDLEWARE PIPELINE
+// 14. MIDDLEWARE PIPELINE
 // ==========================================
 app.UseHttpsRedirection();
 
@@ -261,11 +319,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // ==========================================
-// 14. MAP CONTROLLERS
+// 15. MAP CONTROLLERS
 // ==========================================
 app.MapControllers();
 
 // ==========================================
-// 15. RUN APPLICATION
+// 16. RUN APPLICATION
 // ==========================================
 await app.RunAsync();
