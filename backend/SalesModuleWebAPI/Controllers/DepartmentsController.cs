@@ -1,13 +1,15 @@
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SalesModuleWebAPI.Data;
 using SalesModuleWebAPI.DTOs.Departments;
 using SalesModuleWebAPI.Models;
-
+using System.Linq;
 
 namespace SalesModuleWebAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class DepartmentsController : ControllerBase
@@ -28,6 +30,7 @@ namespace SalesModuleWebAPI.Controllers
                 .Select(d => new DepartmentResponseDto
                 {
                     Id = d.Id,
+                    Code = d.Code,
                     Name = d.Name,
                     Description = d.Description,
                     IsActive = d.IsActive,
@@ -50,6 +53,7 @@ namespace SalesModuleWebAPI.Controllers
                 .Select(d => new DepartmentResponseDto
                 {
                     Id = d.Id,
+                    Code = d.Code,
                     Name = d.Name,
                     Description = d.Description,
                     IsActive = d.IsActive,
@@ -68,6 +72,7 @@ namespace SalesModuleWebAPI.Controllers
         }
 
         // POST: api/departments
+        [Authorize(Roles = "System Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateDepartment(
             CreateDepartmentDto dto)
@@ -98,6 +103,7 @@ namespace SalesModuleWebAPI.Controllers
 
             var department = new Department
             {
+                Code = code,
                 Name = name,
                 Description = dto.Description?.Trim(),
                 IsActive = true,
@@ -114,6 +120,7 @@ namespace SalesModuleWebAPI.Controllers
                 new DepartmentResponseDto
                 {
                     Id = department.Id,
+                    Code = department.Code,
                     Name = department.Name,
                     Description = department.Description,
                     IsActive = department.IsActive,
@@ -123,6 +130,7 @@ namespace SalesModuleWebAPI.Controllers
         }
 
         // PUT: api/departments/{id}
+        [Authorize(Roles = "System Admin")]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateDepartment(
             Guid id,
@@ -153,15 +161,25 @@ namespace SalesModuleWebAPI.Controllers
             department.Description = dto.Description?.Trim();
             department.IsActive = dto.IsActive;
 
+            // Generate a code only if this department has no code.
+            // Existing department codes are never changed.
+            if (string.IsNullOrWhiteSpace(department.Code))
+            {
+                department.Code =
+                    await GenerateDepartmentCodeAsync(department.Name);
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Department updated successfully."
+                message = "Department updated successfully.",
+                code = department.Code
             });
         }
 
         // DELETE: api/departments/{id}
+        [Authorize(Roles = "System Admin")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteDepartment(Guid id)
         {
@@ -189,6 +207,54 @@ namespace SalesModuleWebAPI.Controllers
             {
                 message = "Department deleted successfully."
             });
+        }
+
+        // Generate a unique code containing letters only.
+        private async Task<string> GenerateDepartmentCodeAsync(
+            string departmentName)
+        {
+            var letters = new string(
+                departmentName
+                    .Where(char.IsLetter)
+                    .Select(char.ToUpperInvariant)
+                    .ToArray()
+            );
+
+            while (letters.Length < 3)
+            {
+                letters += "X";
+            }
+
+            // Try increasingly longer prefixes.
+            for (int length = 3;
+                 length <= letters.Length && length <= 20;
+                 length++)
+            {
+                var candidate = letters[..length];
+
+                bool exists = await _context.Departments
+                    .AnyAsync(d => d.Code == candidate);
+
+                if (!exists)
+                    return candidate;
+            }
+
+            // If all prefixes are taken, try letter suffixes.
+            for (char suffix = 'A'; suffix <= 'Z'; suffix++)
+            {
+                var candidate =
+                    letters[..Math.Min(17, letters.Length)] + suffix;
+
+                bool exists = await _context.Departments
+                    .AnyAsync(d => d.Code == candidate);
+
+                if (!exists)
+                    return candidate;
+            }
+
+            throw new InvalidOperationException(
+                "Unable to generate a unique department code."
+            );
         }
     }
 }

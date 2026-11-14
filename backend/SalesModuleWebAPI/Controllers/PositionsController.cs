@@ -1,4 +1,5 @@
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SalesModuleWebAPI.Data;
@@ -8,6 +9,7 @@ using SalesModuleWebAPI.DTOs.UserAssignments;
 
 namespace SalesModuleWebAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class PositionsController : ControllerBase
@@ -97,6 +99,7 @@ namespace SalesModuleWebAPI.Controllers
 
         // POST: api/positions
 
+        [Authorize(Roles = "System Admin")]
         [HttpPost]
         public async Task<IActionResult> CreatePosition(
             CreatePositionDto dto)
@@ -159,6 +162,7 @@ namespace SalesModuleWebAPI.Controllers
 
         // PUT: api/positions/{id}
 
+        [Authorize(Roles = "System Admin")]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdatePosition(
             Guid id,
@@ -218,6 +222,7 @@ namespace SalesModuleWebAPI.Controllers
 
         // DELETE: api/positions/{id}
 
+        [Authorize(Roles = "System Admin")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeletePosition(Guid id)
         {

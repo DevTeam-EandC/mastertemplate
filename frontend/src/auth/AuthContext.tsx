@@ -34,7 +34,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         useState<DashboardAssignment | null>(null);
 
     const [loading, setLoading] = useState(true);
-
     // Restore login information after page refresh.
     useEffect(() => {
         try {
@@ -83,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     // Login API.
-    const login = async (
+    const login = useCallback(async (
         email: string,
         password: string
     ): Promise<LoginResponse> => {
@@ -121,7 +120,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setActiveDashboard(null);
 
         return data;
-    };
+    }, []);
 
     // Only allow dashboards returned by the authenticated API.
     const switchDashboard = useCallback(
@@ -177,6 +176,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             dashboards,
             activeDashboard,
             loading,
+            login,
             switchDashboard,
             logout,
         ]

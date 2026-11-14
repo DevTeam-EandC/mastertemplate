@@ -1,3 +1,4 @@
+
 export interface UserDepartmentAssignment {
     id: string;
     departmentId: string;
@@ -50,4 +51,32 @@ export interface UpdateUserRolesRequest {
 
 export interface UpdateUserAssignmentsRequest {
     assignments: UserAssignmentItem[];
+}
+
+export interface Department {
+    id: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    isActive: boolean;
+    createdAt: string;
+    positionCount: number;
+}
+
+export interface Position {
+    id: string;
+    name: string;
+    description?: string | null;
+    departmentId: string;
+    departmentCode: string;
+    departmentName: string;
+    isActive: boolean;
+    createdAt: string;
+}
+
+export interface Role {
+    id: string;
+    name: string;
+    description?: string | null;
+    userCount: number;
 }

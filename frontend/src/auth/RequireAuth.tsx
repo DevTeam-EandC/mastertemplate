@@ -24,7 +24,12 @@ export default function RequireAuth({
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole && !user.roles?.includes(requiredRole)) {
+    if (
+        requiredRole &&
+        !user.roles?.some(
+            role => role.trim().toLowerCase() === requiredRole.trim().toLowerCase()
+        )
+    ) {
         return <Navigate to="/no-dashboard" replace />;
     }
 
