@@ -1,3 +1,4 @@
+
 export interface ElevatorDetail {
     elevatorType: string;
     ratedCapacity: string;
@@ -27,22 +28,40 @@ export interface ClientProfileOptions {
     defaultTypeOfUnit: string;
 }
 
+// Client-level information.
+// One client can have multiple projects.
 export interface ClientProfile {
     id: string;
     clientName: string;
     contactNumber: string;
     emailAddress: string;
+    leadSource: string;
+    referralBy: string | null;
+    accountManagerUserId: string;
+    accountManagerName: string;
+    createdAtUtc: string;
+    updatedAtUtc: string;
+    projects: ProjectProfile[];
+}
+
+// Project-level information.
+// Each project belongs to one client.
+export interface ProjectProfile {
+    id: string;
+    clientId: string;
+    clientName: string;
+    contactNumber: string;
+    emailAddress: string;
+    leadSource: string;
+    referralBy: string | null;
+    accountManagerName: string;
     buildingType: string;
     projectType: string;
     salesOfficerUserId: string;
     salesOfficerName: string;
-    accountManagerUserId: string;
-    accountManagerName: string;
-    leadSource: string;
     typeOfUnit: string;
-    referralBy: string | null;
-    specialInstructions: string | null;
     quotationType: string;
+    specialInstructions: string | null;
     numberOfElevators: number;
     isSentToDesign: boolean;
     sentToDesignAtUtc: string | null;
@@ -51,18 +70,27 @@ export interface ClientProfile {
     elevators: ElevatorDetail[];
 }
 
-// Body sent to create and update. The server sets Project Type, Account
-// Manager and Type of Unit, so they are not part of this request.
-export interface SaveClientProfile {
+// Client create/update request.
+export interface SaveClient {
     clientName: string;
     contactNumber: string;
     emailAddress: string;
-    buildingType: string;
-    salesOfficerUserId: string;
     leadSource: string;
     referralBy: string | null;
-    specialInstructions: string | null;
+}
+
+// Project create/update request.
+export interface SaveProject {
+    buildingType: string;
+    salesOfficerUserId: string;
     quotationType: string;
+    specialInstructions: string | null;
     numberOfElevators: number;
     elevators: ElevatorDetail[];
+}
+
+// Creating a new client and its first project.
+export interface CreateClientProfile {
+    client: SaveClient;
+    project: SaveProject;
 }

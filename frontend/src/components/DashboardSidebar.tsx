@@ -38,6 +38,7 @@ interface DashboardSidebarProps {
     subtitle: string;
     groups: SidebarGroup[];
     open: boolean;
+    collapsed: boolean;
     onClose: () => void;
 }
 
@@ -71,6 +72,7 @@ export default function DashboardSidebar({
     subtitle,
     groups,
     open,
+    collapsed,
     onClose,
 }: DashboardSidebarProps) {
     const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -98,6 +100,11 @@ export default function DashboardSidebar({
         ? "visible translate-x-0"
         : "invisible -translate-x-full";
 
+    // Desktop: the sidebar can be hidden with the header toggle.
+    const desktopState = collapsed
+        ? "md:invisible md:-translate-x-full"
+        : "md:visible md:translate-x-0";
+
     return (
         <>
             {open && (
@@ -111,7 +118,7 @@ export default function DashboardSidebar({
             <aside
                 id={id}
                 aria-label={`${title} navigation`}
-                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-800 bg-slate-950 text-white transition-[transform,visibility] duration-200 ease-out motion-reduce:transition-none md:visible md:translate-x-0 ${panelState}`}
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-800 bg-slate-950 text-white transition-[transform,visibility] duration-200 ease-out motion-reduce:transition-none ${desktopState} ${panelState}`}
             >
                 <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-5">
                     <div className="min-w-0">

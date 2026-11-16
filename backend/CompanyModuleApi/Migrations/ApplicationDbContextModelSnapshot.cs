@@ -16,7 +16,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261116045409_AddClientProfiles";
+    public override string LastMigrationId => "20261116061249_AddClientAndProjectTables";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -136,7 +136,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("AspNetUsers");
             });
 
-        modelBuilder.Entity("CompanyModuleApi.Models.ClientProfile", b =>
+        modelBuilder.Entity("CompanyModuleApi.Models.Client", b =>
             {
                 b.Property<Guid>("Id")
                     .ValueGeneratedOnAdd()
@@ -144,11 +144,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
                 b.Property<Guid>("AccountManagerUserId")
                     .HasColumnType("uuid");
-
-                b.Property<string>("BuildingType")
-                    .IsRequired()
-                    .HasMaxLength(150)
-                    .HasColumnType("character varying(150)");
 
                 b.Property<string>("ClientName")
                     .IsRequired()
@@ -168,23 +163,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(255)
                     .HasColumnType("character varying(255)");
 
-                b.Property<bool>("IsSentToDesign")
-                    .HasColumnType("boolean");
-
                 b.Property<string>("LeadSource")
-                    .IsRequired()
-                    .HasMaxLength(50)
-                    .HasColumnType("character varying(50)");
-
-                b.Property<int>("NumberOfElevators")
-                    .HasColumnType("integer");
-
-                b.Property<string>("ProjectType")
-                    .IsRequired()
-                    .HasMaxLength(50)
-                    .HasColumnType("character varying(50)");
-
-                b.Property<string>("QuotationType")
                     .IsRequired()
                     .HasMaxLength(50)
                     .HasColumnType("character varying(50)");
@@ -193,33 +172,15 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(200)
                     .HasColumnType("character varying(200)");
 
-                b.Property<Guid>("SalesOfficerUserId")
-                    .HasColumnType("uuid");
-
-                b.Property<DateTime?>("SentToDesignAtUtc")
-                    .HasColumnType("timestamp with time zone");
-
-                b.Property<string>("SpecialInstructions")
-                    .HasMaxLength(2000)
-                    .HasColumnType("character varying(2000)");
-
-                b.Property<string>("TypeOfUnit")
-                    .IsRequired()
-                    .HasMaxLength(100)
-                    .HasColumnType("character varying(100)");
-
                 b.Property<DateTime>("UpdatedAtUtc")
                     .HasColumnType("timestamp with time zone");
 
                 b.HasKey("Id");
 
-                b.HasIndex("AccountManagerUserId");
+                b.HasIndex("AccountManagerUserId", "EmailAddress")
+                    .IsUnique();
 
-                b.HasIndex("IsSentToDesign");
-
-                b.HasIndex("SalesOfficerUserId");
-
-                b.ToTable("ClientProfiles");
+                b.ToTable("Clients");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.Department", b =>
@@ -265,9 +226,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .ValueGeneratedOnAdd()
                     .HasColumnType("uuid");
 
-                b.Property<Guid>("ClientProfileId")
-                    .HasColumnType("uuid");
-
                 b.Property<string>("ElevatorControlSystem")
                     .IsRequired()
                     .HasMaxLength(50)
@@ -292,6 +250,9 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<int>("NumberOfStops")
                     .HasColumnType("integer");
 
+                b.Property<Guid>("ProjectId")
+                    .HasColumnType("uuid");
+
                 b.Property<string>("RatedCapacity")
                     .IsRequired()
                     .HasMaxLength(100)
@@ -310,7 +271,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
                 b.HasKey("Id");
 
-                b.HasIndex("ClientProfileId", "SequenceNumber")
+                b.HasIndex("ProjectId", "SequenceNumber")
                     .IsUnique();
 
                 b.ToTable("ElevatorUnits");
@@ -346,6 +307,68 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsUnique();
 
                 b.ToTable("Positions");
+            });
+
+        modelBuilder.Entity("CompanyModuleApi.Models.Project", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
+
+                b.Property<string>("BuildingType")
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .HasColumnType("character varying(150)");
+
+                b.Property<Guid>("ClientId")
+                    .HasColumnType("uuid");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<bool>("IsSentToDesign")
+                    .HasColumnType("boolean");
+
+                b.Property<int>("NumberOfElevators")
+                    .HasColumnType("integer");
+
+                b.Property<string>("ProjectType")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("character varying(50)");
+
+                b.Property<string>("QuotationType")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("character varying(50)");
+
+                b.Property<Guid>("SalesOfficerUserId")
+                    .HasColumnType("uuid");
+
+                b.Property<DateTime?>("SentToDesignAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("SpecialInstructions")
+                    .HasMaxLength(2000)
+                    .HasColumnType("character varying(2000)");
+
+                b.Property<string>("TypeOfUnit")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)");
+
+                b.Property<DateTime>("UpdatedAtUtc")
+                    .HasColumnType("timestamp with time zone");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ClientId");
+
+                b.HasIndex("IsSentToDesign");
+
+                b.HasIndex("SalesOfficerUserId");
+
+                b.ToTable("Projects");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.RefreshToken", b =>
@@ -520,7 +543,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("AspNetUserTokens");
             });
 
-        modelBuilder.Entity("CompanyModuleApi.Models.ClientProfile", b =>
+        modelBuilder.Entity("CompanyModuleApi.Models.Client", b =>
             {
                 b.HasOne("CompanyModuleApi.Models.ApplicationUser", "AccountManagerUser")
                     .WithMany()
@@ -528,26 +551,18 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired();
 
-                b.HasOne("CompanyModuleApi.Models.ApplicationUser", "SalesOfficerUser")
-                    .WithMany()
-                    .HasForeignKey("SalesOfficerUserId")
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .IsRequired();
-
                 b.Navigation("AccountManagerUser");
-
-                b.Navigation("SalesOfficerUser");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.ElevatorUnit", b =>
             {
-                b.HasOne("CompanyModuleApi.Models.ClientProfile", "ClientProfile")
+                b.HasOne("CompanyModuleApi.Models.Project", "Project")
                     .WithMany("Elevators")
-                    .HasForeignKey("ClientProfileId")
+                    .HasForeignKey("ProjectId")
                     .OnDelete(DeleteBehavior.Cascade)
                     .IsRequired();
 
-                b.Navigation("ClientProfile");
+                b.Navigation("Project");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.Position", b =>
@@ -559,6 +574,25 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
 
                 b.Navigation("Department");
+            });
+
+        modelBuilder.Entity("CompanyModuleApi.Models.Project", b =>
+            {
+                b.HasOne("CompanyModuleApi.Models.Client", "Client")
+                    .WithMany("Projects")
+                    .HasForeignKey("ClientId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.HasOne("CompanyModuleApi.Models.ApplicationUser", "SalesOfficerUser")
+                    .WithMany()
+                    .HasForeignKey("SalesOfficerUserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("Client");
+
+                b.Navigation("SalesOfficerUser");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.RefreshToken", b =>
@@ -655,14 +689,19 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("DepartmentAssignments");
             });
 
-        modelBuilder.Entity("CompanyModuleApi.Models.ClientProfile", b =>
+        modelBuilder.Entity("CompanyModuleApi.Models.Client", b =>
             {
-                b.Navigation("Elevators");
+                b.Navigation("Projects");
             });
 
         modelBuilder.Entity("CompanyModuleApi.Models.Department", b =>
             {
                 b.Navigation("Positions");
+            });
+
+        modelBuilder.Entity("CompanyModuleApi.Models.Project", b =>
+            {
+                b.Navigation("Elevators");
             });
 #pragma warning restore 612, 618
     }

@@ -12,6 +12,7 @@ import RequireAuth from "./auth/RequireAuth";
 import Login from "./pages/Login/Login";
 import DashboardSelection from "./pages/DashboardSelection/DashboardSelection";
 import DashboardSection from "./pages/DashboardSection";
+import NoDashboard from "./pages/NoDashboard";
 
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
@@ -80,19 +81,7 @@ function AppRoutes() {
 
                 <Route
                     path="/no-dashboard"
-                    element={
-                        <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-                            <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                                <h1 className="text-xl font-semibold text-slate-900">
-                                    No dashboard assigned
-                                </h1>
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Please contact your administrator to get
-                                    access to a department dashboard.
-                                </p>
-                            </div>
-                        </div>
-                    }
+                    element={<NoDashboard />}
                 />
 
                 {/* System Admin Routes: one shared layout with logout */}

@@ -4,11 +4,13 @@ import {
     Palette,
     Monitor,
     ArrowRight,
+    LogOut,
     type LucideIcon,
 } from "lucide-react";
 
 import { useAuth } from "../../auth/AuthContext";
 import type { DashboardAssignment } from "../../auth/auth.types";
+import { revokeRefreshToken } from "../../auth/signOut";
 
 const departmentIcons: Record<string, LucideIcon> = {
     SALES: BriefcaseBusiness,
@@ -23,7 +25,14 @@ export default function DashboardSelection() {
         user,
         dashboards,
         switchDashboard,
+        logout,
     } = useAuth();
+
+    const handleLogout = async () => {
+        await revokeRefreshToken();
+        logout();
+        navigate("/login", { replace: true });
+    };
 
     const handleSelect = (dashboard: DashboardAssignment) => {
         const success = switchDashboard(dashboard);
@@ -38,18 +47,30 @@ export default function DashboardSelection() {
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="mx-auto w-full max-w-5xl px-4 py-10 md:px-8 md:py-14">
-                <header className="mb-10">
-                    <p className="text-sm font-medium text-slate-500">
-                        Company Management System
-                    </p>
+                <header className="mb-10 flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <p className="text-sm font-medium text-slate-500">
+                            Company Management System
+                        </p>
 
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-                        Welcome, {user?.firstName}
-                    </h1>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+                            Welcome, {user?.firstName}
+                        </h1>
 
-                    <p className="mt-2 text-sm text-slate-500 md:text-base">
-                        Choose a department and position to continue.
-                    </p>
+                        <p className="mt-2 text-sm text-slate-500 md:text-base">
+                            Choose a department and position to continue.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => void handleLogout()}
+                        aria-label="Log out"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-blue-600"
+                    >
+                        <LogOut size={16} aria-hidden="true" />
+                        Log out
+                    </button>
                 </header>
 
                 {dashboards.length > 0 ? (
