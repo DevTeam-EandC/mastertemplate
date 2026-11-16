@@ -1,4 +1,3 @@
-
 import { useEffect, type ComponentType } from "react";
 import {
     BrowserRouter,
@@ -14,14 +13,19 @@ import Login from "./pages/Login/Login";
 import DashboardSelection from "./pages/DashboardSelection/DashboardSelection";
 import DashboardSection from "./pages/DashboardSection";
 
+import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import UserManagement from "./pages/Admin/UserManagement";
 import CreateUser from "./pages/Admin/CreateUser";
-
-import { dashboardRoutes } from "./config/dashboardRoutes";
 import DepartmentManagement from "./pages/Admin/DepartmentManagement";
 import PositionManagement from "./pages/Admin/PositionManagement";
 import EditUser from "./pages/Admin/EditUser";
+
+import { dashboardRoutes } from "./config/dashboardRoutes";
+import ClientProfileList from "./Dashboards/Sales/AccountManager/ClientProfileList";
+import ClientProfileForm from "./Dashboards/Sales/AccountManager/ClientProfileForm";
+import DesignClientReferences from "./Dashboards/Design/DesignSpecialist/ClientReferences";
+
 export function AuthorizedDashboard({
     routeKey,
     component: Dashboard,
@@ -55,7 +59,7 @@ export function AuthorizedDashboard({
     ]);
 
     if (!assignment) {
-        return <Navigate to="/select-dashboard" replace />;
+        return <Navigate to="/no-dashboard" replace />;
     }
 
     return <Dashboard />;
@@ -69,7 +73,6 @@ function AppRoutes() {
 
             {/* Authenticated Routes */}
             <Route element={<RequireAuth />}>
-
                 <Route
                     path="/select-dashboard"
                     element={<DashboardSelection />}
@@ -78,71 +81,36 @@ function AppRoutes() {
                 <Route
                     path="/no-dashboard"
                     element={
-                        <div className="flex min-h-screen items-center justify-center">
-                            <div className="text-center">
-                                <h1 className="text-2xl font-bold text-slate-800">
-                                    No Dashboard Assigned
+                        <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
+                            <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                                <h1 className="text-xl font-semibold text-slate-900">
+                                    No dashboard assigned
                                 </h1>
-                                <p className="mt-2 text-slate-500">
-                                    Please contact your administrator.
+                                <p className="mt-2 text-sm text-slate-500">
+                                    Please contact your administrator to get
+                                    access to a department dashboard.
                                 </p>
                             </div>
                         </div>
                     }
                 />
 
-                {/* System Admin Routes */}
-                <Route path="/admin">
-                    <Route
-                        path="dashboard"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <AdminDashboard />
-                            </RequireAuth>
-                        }
-                    />
-
-                    <Route
-                        path="users"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <UserManagement />
-                            </RequireAuth>
-                        }
-                    />
-
-                    <Route
-                        path="users/new"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <CreateUser />
-                            </RequireAuth>
-                        }
-                    />
-                    <Route
-                        path="departments"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <DepartmentManagement />
-                            </RequireAuth>
-                        }
-                    />
-                    <Route
-                        path="positions"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <PositionManagement />
-                            </RequireAuth>
-                        }
-                    />
-                    <Route
-                        path="users/:id/edit"
-                        element={
-                            <RequireAuth requiredRole="System Admin">
-                                <EditUser />
-                            </RequireAuth>
-                        }
-                    />
+                {/* System Admin Routes: one shared layout with logout */}
+                <Route
+                    path="/admin"
+                    element={
+                        <RequireAuth requiredRole="System Admin">
+                            <AdminLayout />
+                        </RequireAuth>
+                    }
+                >
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="users/new" element={<CreateUser />} />
+                    <Route path="users/:id/edit" element={<EditUser />} />
+                    <Route path="departments" element={<DepartmentManagement />} />
+                    <Route path="positions" element={<PositionManagement />} />
                 </Route>
 
                 {/* Position-Specific Dashboards */}
@@ -159,12 +127,31 @@ function AppRoutes() {
                     />
                 ))}
 
+                {/* Sales: client profiles. Must sit before the generic section route. */}
+                <Route
+                    path="/Sales/AccountManager/customers"
+                    element={<ClientProfileList />}
+                />
+                <Route
+                    path="/Sales/AccountManager/customers/new"
+                    element={<ClientProfileForm />}
+                />
+                <Route
+                    path="/Sales/AccountManager/customers/:id/edit"
+                    element={<ClientProfileForm />}
+                />
+
+                {/* Design: client references sent from Sales. */}
+                <Route
+                    path="/Design/DesignSpecialist/client-references"
+                    element={<DesignClientReferences />}
+                />
+
                 {/* Dashboard Section Pages */}
                 <Route
                     path="/:department/:position/:page"
                     element={<DashboardSection />}
                 />
-
             </Route>
 
             {/* Unknown URL */}

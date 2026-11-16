@@ -1,11 +1,5 @@
-
 import { useEffect, useState } from "react";
-import {
-    Users,
-    ClipboardList,
-    Clock,
-    CheckCircle,
-} from "lucide-react";
+import { Users, ClipboardList, Clock, CheckCircle, type LucideIcon } from "lucide-react";
 
 import { useAuth } from "../auth/AuthContext";
 import { getDashboardSummary } from "../api/dashboardApi";
@@ -20,7 +14,7 @@ interface DashboardHomeProps {
     }[];
 }
 
-const icons = [Users, ClipboardList, Clock, CheckCircle];
+const icons: LucideIcon[] = [Users, ClipboardList, Clock, CheckCircle];
 
 export default function DashboardHome({
     title,
@@ -74,28 +68,32 @@ export default function DashboardHome({
         return () => {
             cancelled = true;
         };
-    }, [
-        activeDashboard?.departmentId,
-        activeDashboard?.positionId,
-    ]);
+    }, [activeDashboard?.departmentId, activeDashboard?.positionId]);
 
     return (
-        <div>
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-800">
+        <div className="space-y-8">
+            <header>
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                     {title}
                 </h1>
-
-                <p className="mt-1 text-slate-500">{description}</p>
-            </div>
+                <p className="mt-1 max-w-2xl text-sm text-slate-500 md:text-base">
+                    {description}
+                </p>
+            </header>
 
             {error && (
-                <div className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                >
                     {error}
                 </div>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <section
+                aria-label="Key figures"
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            >
                 {cards.map((card, index) => {
                     const Icon = icons[index % icons.length];
                     const value = summary?.metrics?.[card.key] ?? 0;
@@ -103,60 +101,77 @@ export default function DashboardHome({
                     return (
                         <div
                             key={card.key}
-                            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                         >
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm text-slate-500">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-medium text-slate-500">
                                     {card.title}
                                 </p>
 
-                                <Icon className="text-blue-600" size={22} />
+                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                                    <Icon size={18} aria-hidden="true" />
+                                </span>
                             </div>
 
-                            <p className="mt-4 text-3xl font-bold text-slate-800">
-                                {loading ? "..." : value}
+                            <p className="mt-4 text-3xl font-semibold tabular-nums text-slate-900">
+                                {loading ? (
+                                    <span
+                                        aria-label="Loading"
+                                        className="inline-block h-8 w-16 animate-pulse rounded bg-slate-200 motion-reduce:animate-none"
+                                    />
+                                ) : (
+                                    value
+                                )}
                             </p>
                         </div>
                     );
                 })}
-            </div>
+            </section>
 
-            <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
-                <h2 className="text-lg font-semibold text-slate-800">
-                    Recent Activities
-                </h2>
+            <section
+                aria-labelledby="recent-activities-heading"
+                className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+            >
+                <div className="border-b border-slate-100 px-5 py-4 md:px-6">
+                    <h2
+                        id="recent-activities-heading"
+                        className="text-base font-semibold text-slate-900"
+                    >
+                        Recent activity
+                    </h2>
+                </div>
 
-                {loading ? (
-                    <p className="mt-3 text-sm text-slate-500">
-                        Loading activities...
-                    </p>
-                ) : summary?.recentActivities?.length ? (
-                    <div className="mt-4 space-y-4">
-                        {summary.recentActivities.map((activity) => (
-                            <div
-                                key={activity.id}
-                                className="border-b border-slate-100 pb-3 last:border-0"
-                            >
-                                <p className="font-medium text-slate-800">
-                                    {activity.title}
-                                </p>
-
-                                <p className="text-sm text-slate-500">
-                                    {activity.description}
-                                </p>
-
-                                <p className="mt-1 text-xs text-slate-400">
-                                    {new Date(activity.createdAtUtc).toLocaleString()}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="mt-3 text-sm text-slate-500">
-                        No recent activities available.
-                    </p>
-                )}
-            </div>
+                <div className="px-5 py-2 md:px-6">
+                    {loading ? (
+                        <p className="py-6 text-sm text-slate-500">
+                            Loading activity…
+                        </p>
+                    ) : summary?.recentActivities?.length ? (
+                        <ul className="divide-y divide-slate-100">
+                            {summary.recentActivities.map((activity) => (
+                                <li key={activity.id} className="py-4">
+                                    <p className="font-medium text-slate-800">
+                                        {activity.title}
+                                    </p>
+                                    <p className="mt-0.5 text-sm text-slate-500">
+                                        {activity.description}
+                                    </p>
+                                    <time
+                                        dateTime={activity.createdAtUtc}
+                                        className="mt-1 block text-xs text-slate-400"
+                                    >
+                                        {new Date(activity.createdAtUtc).toLocaleString()}
+                                    </time>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="py-6 text-sm text-slate-500">
+                            No recent activity yet.
+                        </p>
+                    )}
+                </div>
+            </section>
         </div>
     );
 }

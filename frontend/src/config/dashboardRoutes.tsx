@@ -9,7 +9,10 @@ import DesignSpecialist from "../Dashboards/Design/DesignSpecialist/Dashboard";
 
 import ITDepartmentHead from "../Dashboards/IT/DepartmentHead/Dashboard";
 import ITLead from "../Dashboards/IT/ITLead/Dashboard";
+import ExecutivePresident from "../Dashboards/Executive/President/ExecutivePresidentDashboard";
 
+import PurchasingHead from "../Dashboards/Purchasing/PurchasingHead/Dashboard";
+import OperationsHead from "../Dashboards/Operations/OperationsHead/Dashboard";
 export interface DashboardRoute {
     key: string;
     path: string;
@@ -60,5 +63,28 @@ export const dashboardRoutes: DashboardRoute[] = [
         department: "IT",
         position: "ITLead",
         component: ITLead,
+
     },
+    {
+        key: "Executive/President",
+        path: "Executive/President",
+        department: "Executive",
+        position: "President",
+        component: ExecutivePresident,
+    },
+    {
+        key: "Purchasing/PurchasingHead",
+        path: "Purchasing/PurchasingHead",
+        department: "Purchasing",
+        position: "PurchasingHead",
+        component: PurchasingHead,
+    },
+    {
+        key: "Operations/OperationsHead",
+        path: "Operations/OperationsHead",
+        department: "Operations",
+        position: "OperationsHead",
+        component: OperationsHead,
+    },
+
 ];

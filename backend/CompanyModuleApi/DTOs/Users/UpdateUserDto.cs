@@ -1,0 +1,21 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace CompanyModuleApi.DTOs.Users
+{
+    public class UpdateUserDto
+    {
+        [Required]
+        [MaxLength(100)]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(100)]
+        public string LastName { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; } = true;
+    }
+}

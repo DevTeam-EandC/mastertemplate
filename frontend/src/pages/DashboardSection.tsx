@@ -4,6 +4,7 @@ import { Navigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../components/DashboardLayout";
 import { dashboardMenus } from "../config/dashboardMenus";
+import { dashboardRoutes } from "../config/dashboardRoutes";
 import { useAuth } from "../auth/AuthContext";
 
 export default function DashboardSection() {
@@ -19,15 +20,21 @@ export default function DashboardSection() {
             ? `${department}/${position}`
             : "";
 
+    // Confirm this is a registered dashboard.
+    const registeredDashboard = dashboardRoutes.find(
+        route => route.key === dashboardKey
+    );
+
+    // Confirm this user actually has the assignment.
     const assignment = dashboards.find(
-        (dashboard) => dashboard.dashboardKey === dashboardKey
+        dashboard => dashboard.dashboardKey === dashboardKey
     );
 
     const groups = dashboardMenus[dashboardKey] ?? [];
 
     const selectedItem = groups
-        .flatMap((group) => group.items)
-        .find((item) => item.path === page);
+        .flatMap(group => group.items)
+        .find(item => item.path === page);
 
     useEffect(() => {
         if (assignment) {
@@ -40,12 +47,25 @@ export default function DashboardSection() {
         switchDashboard,
     ]);
 
-    if (!department || !position || !page || !assignment) {
-        return <Navigate to="/select-dashboard" replace />;
+    // Invalid or unassigned dashboard.
+    if (
+        !department ||
+        !position ||
+        !page ||
+        !registeredDashboard ||
+        !assignment
+    ) {
+        return <Navigate to="/no-dashboard" replace />;
     }
 
+    // Dashboard home is handled by its own dashboard component.
     if (!selectedItem || page === "dashboard") {
-        return <Navigate to={`/${dashboardKey}/dashboard`} replace />;
+        return (
+            <Navigate
+                to={`/${registeredDashboard.path}/dashboard`}
+                replace
+            />
+        );
     }
 
     return (

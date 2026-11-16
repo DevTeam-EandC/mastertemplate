@@ -1,16 +1,16 @@
-
 import { useNavigate } from "react-router-dom";
 import {
     BriefcaseBusiness,
     Palette,
     Monitor,
     ArrowRight,
+    type LucideIcon,
 } from "lucide-react";
 
 import { useAuth } from "../../auth/AuthContext";
 import type { DashboardAssignment } from "../../auth/auth.types";
 
-const departmentIcons: Record<string, typeof BriefcaseBusiness> = {
+const departmentIcons: Record<string, LucideIcon> = {
     SALES: BriefcaseBusiness,
     DESIGN: Palette,
     IT: Monitor,
@@ -36,67 +36,71 @@ export default function DashboardSelection() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 p-6">
-            <div className="mx-auto max-w-5xl">
-                <div className="mb-8">
-                    <p className="text-sm font-medium text-blue-600">
+        <div className="min-h-screen bg-slate-100 text-slate-900">
+            <div className="mx-auto w-full max-w-5xl px-4 py-10 md:px-8 md:py-14">
+                <header className="mb-10">
+                    <p className="text-sm font-medium text-slate-500">
                         Company Management System
                     </p>
 
-                    <h1 className="mt-2 text-3xl font-bold text-slate-800">
+                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                         Welcome, {user?.firstName}
                     </h1>
 
-                    <p className="mt-2 text-slate-500">
-                        Select a department and position to continue.
+                    <p className="mt-2 text-sm text-slate-500 md:text-base">
+                        Choose a department and position to continue.
                     </p>
-                </div>
+                </header>
 
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {dashboards.map((dashboard) => {
-                        const Icon =
-                            departmentIcons[dashboard.departmentCode] ??
-                            BriefcaseBusiness;
+                {dashboards.length > 0 ? (
+                    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {dashboards.map((dashboard) => {
+                            const Icon =
+                                departmentIcons[dashboard.departmentCode] ??
+                                BriefcaseBusiness;
 
-                        return (
-                            <button
-                                key={`${dashboard.departmentId}-${dashboard.positionId}`}
-                                type="button"
-                                onClick={() => handleSelect(dashboard)}
-                                className="rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-md"
-                            >
-                                <div className="mb-5 flex items-center justify-between">
-                                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                                        <Icon size={26} />
-                                    </div>
+                            return (
+                                <li key={`${dashboard.departmentId}-${dashboard.positionId}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelect(dashboard)}
+                                        className="group flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                                                <Icon size={22} aria-hidden="true" />
+                                            </span>
 
-                                    <ArrowRight
-                                        size={20}
-                                        className="text-slate-400"
-                                    />
-                                </div>
+                                            <ArrowRight
+                                                size={18}
+                                                aria-hidden="true"
+                                                className="mt-1 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-700"
+                                            />
+                                        </div>
 
-                                <h2 className="text-xl font-bold text-slate-800">
-                                    {dashboard.departmentName}
-                                </h2>
+                                        <h2 className="mt-5 text-lg font-semibold text-slate-900">
+                                            {dashboard.departmentName}
+                                        </h2>
 
-                                <p className="mt-1 text-slate-500">
-                                    {dashboard.positionName}
-                                </p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            {dashboard.positionName}
+                                        </p>
 
-                                {dashboard.isPrimary && (
-                                    <span className="mt-4 inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-                                        Primary Department
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {dashboards.length === 0 && (
-                    <div className="rounded-xl bg-white p-8 text-center">
-                        <h2 className="font-semibold text-slate-800">
+                                        {dashboard.isPrimary && (
+                                            <span className="mt-auto self-start pt-4">
+                                                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                                                    Primary department
+                                                </span>
+                                            </span>
+                                        )}
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                        <h2 className="font-semibold text-slate-900">
                             No department assignments
                         </h2>
                         <p className="mt-2 text-sm text-slate-500">

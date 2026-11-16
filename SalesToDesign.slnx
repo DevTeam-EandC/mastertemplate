@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="backend/SalesModuleWebAPI/SalesModuleWebAPI.csproj" />
+  <Project Path="backend/CompanyModuleApi/CompanyModuleApi.csproj" />
   <Project Path="frontend/" Type="Website" DisplayName="frontend">
     <BuildType Project="Debug" />
     <Properties Name="WebsiteProperties">

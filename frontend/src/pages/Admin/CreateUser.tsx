@@ -247,7 +247,7 @@ export default function CreateUser() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
+            <div className="flex min-h-[50vh] items-center justify-center">
                 <p className="text-slate-500">
                     Loading user creation form...
                 </p>
@@ -256,7 +256,7 @@ export default function CreateUser() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6">
+        <div>
             <div className="mx-auto max-w-5xl">
 
                 <div className="mb-6">
