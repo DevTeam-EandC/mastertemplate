@@ -25,7 +25,9 @@ namespace CompanyModuleApi.Data
         public DbSet<UserDepartmentPosition> UserDepartmentPositions
             => Set<UserDepartmentPosition>();
 
-        public DbSet<ClientProfile> ClientProfiles => Set<ClientProfile>();
+        public DbSet<Client> Clients => Set<Client>();
+
+        public DbSet<Project> Projects => Set<Project>();
 
         public DbSet<ElevatorUnit> ElevatorUnits => Set<ElevatorUnit>();
 
@@ -68,21 +70,35 @@ namespace CompanyModuleApi.Data
                     .HasForeignKey(x => x.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
-            builder.Entity<ClientProfile>(entity =>
+            builder.Entity<Client>(entity =>
             {
                 entity.HasKey(x => x.Id);
-
-                entity.HasOne(x => x.SalesOfficerUser)
-                    .WithMany()
-                    .HasForeignKey(x => x.SalesOfficerUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.AccountManagerUser)
                     .WithMany()
                     .HasForeignKey(x => x.AccountManagerUserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(x => x.AccountManagerUserId);
+                // One client record per email for each Account Manager.
+                entity.HasIndex(x => new { x.AccountManagerUserId, x.EmailAddress })
+                    .IsUnique();
+            });
+
+            builder.Entity<Project>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.HasOne(x => x.Client)
+                    .WithMany(c => c.Projects)
+                    .HasForeignKey(x => x.ClientId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.SalesOfficerUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.SalesOfficerUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => x.ClientId);
                 entity.HasIndex(x => x.IsSentToDesign);
             });
 
@@ -90,12 +106,12 @@ namespace CompanyModuleApi.Data
             {
                 entity.HasKey(x => x.Id);
 
-                entity.HasOne(x => x.ClientProfile)
-                    .WithMany(c => c.Elevators)
-                    .HasForeignKey(x => x.ClientProfileId)
+                entity.HasOne(x => x.Project)
+                    .WithMany(p => p.Elevators)
+                    .HasForeignKey(x => x.ProjectId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(x => new { x.ClientProfileId, x.SequenceNumber })
+                entity.HasIndex(x => new { x.ProjectId, x.SequenceNumber })
                     .IsUnique();
             });
 

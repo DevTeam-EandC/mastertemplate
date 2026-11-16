@@ -2,16 +2,16 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CompanyModuleApi.Models;
 
-// One elevator inside a client profile. Captured per elevator, so each
+// One elevator inside a project. Captured per elevator, so each
 // unit can have its own type, capacity and stops.
 public class ElevatorUnit
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
-    public Guid ClientProfileId { get; set; }
+    public Guid ProjectId { get; set; }
 
-    public ClientProfile? ClientProfile { get; set; }
+    public Project? Project { get; set; }
 
     // 1-based position inside the profile, shown in the UI as "Elevator 1".
     public int SequenceNumber { get; set; }

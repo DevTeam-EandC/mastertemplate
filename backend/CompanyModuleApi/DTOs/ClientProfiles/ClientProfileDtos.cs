@@ -31,9 +31,9 @@ public class ElevatorUnitDto
     public bool ShaftExisting { get; set; }
 }
 
-public class SaveClientProfileDto
+// Client details. Used to register a client and to update it.
+public class SaveClientDto
 {
-    // Client information.
     [Required, MaxLength(200)]
     public string ClientName { get; set; } = string.Empty;
 
@@ -43,7 +43,16 @@ public class SaveClientProfileDto
     [Required, EmailAddress, MaxLength(255)]
     public string EmailAddress { get; set; } = string.Empty;
 
-    // Client project information.
+    [Required, MaxLength(50)]
+    public string LeadSource { get; set; } = string.Empty;
+
+    [MaxLength(200)]
+    public string? ReferralBy { get; set; }
+}
+
+// Project details. Used to add a project to a client and to update it.
+public class SaveProjectDto
+{
     [Required, MaxLength(150)]
     public string BuildingType { get; set; } = string.Empty;
 
@@ -51,22 +60,73 @@ public class SaveClientProfileDto
     public Guid SalesOfficerUserId { get; set; }
 
     [Required, MaxLength(50)]
-    public string LeadSource { get; set; } = string.Empty;
-
-    [MaxLength(200)]
-    public string? ReferralBy { get; set; }
+    public string QuotationType { get; set; } = string.Empty;
 
     [MaxLength(2000)]
     public string? SpecialInstructions { get; set; }
-
-    [Required, MaxLength(50)]
-    public string QuotationType { get; set; } = string.Empty;
 
     // Quantity of elevators. Must equal Elevators.Count.
     [Range(1, 50)]
     public int NumberOfElevators { get; set; }
 
     [Required]
+    public List<ElevatorUnitDto> Elevators { get; set; } = new();
+}
+
+// Registers a new client together with its first project.
+public class CreateClientProfileDto
+{
+    [Required]
+    public SaveClientDto Client { get; set; } = new();
+
+    [Required]
+    public SaveProjectDto Project { get; set; } = new();
+}
+
+public class ClientLookupDto
+{
+    public bool Exists { get; set; }
+    public ClientDto? Client { get; set; }
+}
+
+public class ClientDto
+{
+    public Guid Id { get; set; }
+    public string ClientName { get; set; } = string.Empty;
+    public string ContactNumber { get; set; } = string.Empty;
+    public string EmailAddress { get; set; } = string.Empty;
+    public string LeadSource { get; set; } = string.Empty;
+    public string? ReferralBy { get; set; }
+    public Guid AccountManagerUserId { get; set; }
+    public string AccountManagerName { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+    public List<ProjectDto> Projects { get; set; } = new();
+}
+
+// A project with its client details included, so it can be shown on its own.
+public class ProjectDto
+{
+    public Guid Id { get; set; }
+    public Guid ClientId { get; set; }
+    public string ClientName { get; set; } = string.Empty;
+    public string ContactNumber { get; set; } = string.Empty;
+    public string EmailAddress { get; set; } = string.Empty;
+    public string LeadSource { get; set; } = string.Empty;
+    public string? ReferralBy { get; set; }
+    public string AccountManagerName { get; set; } = string.Empty;
+    public string BuildingType { get; set; } = string.Empty;
+    public string ProjectType { get; set; } = string.Empty;
+    public Guid SalesOfficerUserId { get; set; }
+    public string SalesOfficerName { get; set; } = string.Empty;
+    public string TypeOfUnit { get; set; } = string.Empty;
+    public string QuotationType { get; set; } = string.Empty;
+    public string? SpecialInstructions { get; set; }
+    public int NumberOfElevators { get; set; }
+    public bool IsSentToDesign { get; set; }
+    public DateTime? SentToDesignAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
     public List<ElevatorUnitDto> Elevators { get; set; } = new();
 }
 
@@ -87,29 +147,4 @@ public class SalesOfficerOptionDto
 {
     public Guid UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
-}
-
-public class ClientProfileResponseDto
-{
-    public Guid Id { get; set; }
-    public string ClientName { get; set; } = string.Empty;
-    public string ContactNumber { get; set; } = string.Empty;
-    public string EmailAddress { get; set; } = string.Empty;
-    public string BuildingType { get; set; } = string.Empty;
-    public string ProjectType { get; set; } = string.Empty;
-    public Guid SalesOfficerUserId { get; set; }
-    public string SalesOfficerName { get; set; } = string.Empty;
-    public Guid AccountManagerUserId { get; set; }
-    public string AccountManagerName { get; set; } = string.Empty;
-    public string LeadSource { get; set; } = string.Empty;
-    public string TypeOfUnit { get; set; } = string.Empty;
-    public string? ReferralBy { get; set; }
-    public string? SpecialInstructions { get; set; }
-    public string QuotationType { get; set; } = string.Empty;
-    public int NumberOfElevators { get; set; }
-    public bool IsSentToDesign { get; set; }
-    public DateTime? SentToDesignAtUtc { get; set; }
-    public DateTime CreatedAtUtc { get; set; }
-    public DateTime UpdatedAtUtc { get; set; }
-    public List<ElevatorUnitDto> Elevators { get; set; } = new();
 }
