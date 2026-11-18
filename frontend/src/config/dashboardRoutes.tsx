@@ -13,6 +13,8 @@ import ExecutivePresident from "../Dashboards/Executive/President/ExecutivePresi
 
 import PurchasingHead from "../Dashboards/Purchasing/PurchasingHead/Dashboard";
 import OperationsHead from "../Dashboards/Operations/OperationsHead/Dashboard";
+
+import AccountingHead from "../Dashboards/Accounting/AccountingManager/Dashboard";
 export interface DashboardRoute {
     key: string;
     path: string;
@@ -85,6 +87,20 @@ export const dashboardRoutes: DashboardRoute[] = [
         department: "Operations",
         position: "OperationsHead",
         component: OperationsHead,
+    },
+    {
+        key: "Accounting/AccountingHead",
+        path: "Accounting/AccountingHead",
+        department: "Accounting",
+        position: "AccountingHead",
+        component: AccountingHead,
+    },
+    {
+        key: "Accounting/AccountingManager",
+        path: "Accounting/AccountingManager",
+        department: "Accounting",
+        position: "AccountingManager",
+        component: AccountingHead,
     },
 
 ];

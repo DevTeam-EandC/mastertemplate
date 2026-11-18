@@ -18,6 +18,7 @@ export const dashboardMenus: Record<string, DashboardMenuGroup[]> = {
             items: [
                 { label: "Dashboard", path: "dashboard", icon: "layout-dashboard" },
                 { label: "Client Profiles", path: "customers", icon: "users" },
+                { label: "Projects", path: "projects", icon: "folder-kanban" },
                 { label: "Sales Activities", path: "activities", icon: "clipboard-list" },
                 { label: "Quotations", path: "quotations", icon: "file-text" },
                 { label: "Sales Reports", path: "reports", icon: "chart-column" },

@@ -161,12 +161,14 @@ public class ClientProfilesController : ControllerBase
 
     // POST api/ClientProfiles/clients
     // Registers a new client together with its first project.
+
     [HttpPost("clients")]
-    public async Task<ActionResult<ProjectDto>> CreateClient(
-        [FromBody] CreateClientProfileDto dto,
+    public async Task<ActionResult<ClientDto>> CreateClient(
+        [FromBody] SaveClientDto dto,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId();
+
         if (userId is null)
         {
             return Unauthorized();
@@ -177,19 +179,15 @@ public class ClientProfilesController : ControllerBase
             return Forbid();
         }
 
-        var clientError = ValidateClient(dto.Client);
+        var clientError = ValidateClient(dto);
+
         if (clientError is not null)
         {
             return clientError;
         }
 
-        var projectError = await ValidateProjectAsync(dto.Project, cancellationToken);
-        if (projectError is not null)
-        {
-            return projectError;
-        }
+        var email = NormalizeEmail(dto.EmailAddress);
 
-        var email = NormalizeEmail(dto.Client.EmailAddress);
         var alreadyExists = await _db.Clients.AnyAsync(c =>
             c.AccountManagerUserId == userId.Value &&
             c.EmailAddress == email,
@@ -209,28 +207,30 @@ public class ClientProfilesController : ControllerBase
         var client = new Client
         {
             Id = Guid.NewGuid(),
-            // Auto-assigned from the logged-in user. Never taken from the request body.
             AccountManagerUserId = userId.Value,
-            ClientName = dto.Client.ClientName.Trim(),
-            ContactNumber = dto.Client.ContactNumber.Trim(),
+            ClientName = dto.ClientName.Trim(),
+            ContactNumber = dto.ContactNumber.Trim(),
             EmailAddress = email,
-            LeadSource = dto.Client.LeadSource,
-            ReferralBy = dto.Client.ReferralBy?.Trim(),
+            LeadSource = dto.LeadSource,
+            ReferralBy = dto.ReferralBy?.Trim(),
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
         };
 
-        var project = BuildProject(dto.Project, client.Id, now);
-
         _db.Clients.Add(client);
-        _db.Projects.Add(project);
+
         await _db.SaveChangesAsync(cancellationToken);
 
-        var saved = await ProjectQuery()
-            .FirstAsync(p => p.Id == project.Id, cancellationToken);
+        var saved = await ClientQuery()
+            .FirstAsync(c => c.Id == client.Id, cancellationToken);
 
-        return CreatedAtAction(nameof(GetProject), new { projectId = saved.Id }, ToProjectDto(saved));
+        return CreatedAtAction(
+            nameof(GetClient),
+            new { clientId = saved.Id },
+            ToClientDto(saved)
+        );
     }
+
 
     // PUT api/ClientProfiles/clients/{clientId}
     // Updates client details. Only the owning Account Manager can edit.

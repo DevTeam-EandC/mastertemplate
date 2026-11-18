@@ -28,8 +28,12 @@ export interface ClientProfileOptions {
     defaultTypeOfUnit: string;
 }
 
-// Client-level information.
-// One client can have multiple projects.
+export interface ClientLookup {
+    exists: boolean;
+    client: ClientProfile | null;
+}
+
+// CLIENT RESPONSE
 export interface ClientProfile {
     id: string;
     clientName: string;
@@ -44,8 +48,7 @@ export interface ClientProfile {
     projects: ProjectProfile[];
 }
 
-// Project-level information.
-// Each project belongs to one client.
+// PROJECT RESPONSE
 export interface ProjectProfile {
     id: string;
     clientId: string;
@@ -55,6 +58,7 @@ export interface ProjectProfile {
     leadSource: string;
     referralBy: string | null;
     accountManagerName: string;
+
     buildingType: string;
     projectType: string;
     salesOfficerUserId: string;
@@ -62,15 +66,18 @@ export interface ProjectProfile {
     typeOfUnit: string;
     quotationType: string;
     specialInstructions: string | null;
+
     numberOfElevators: number;
     isSentToDesign: boolean;
     sentToDesignAtUtc: string | null;
+
     createdAtUtc: string;
     updatedAtUtc: string;
+
     elevators: ElevatorDetail[];
 }
 
-// Client create/update request.
+// CLIENT CREATE / UPDATE REQUEST
 export interface SaveClient {
     clientName: string;
     contactNumber: string;
@@ -79,7 +86,7 @@ export interface SaveClient {
     referralBy: string | null;
 }
 
-// Project create/update request.
+// PROJECT CREATE / UPDATE REQUEST
 export interface SaveProject {
     buildingType: string;
     salesOfficerUserId: string;
@@ -87,10 +94,4 @@ export interface SaveProject {
     specialInstructions: string | null;
     numberOfElevators: number;
     elevators: ElevatorDetail[];
-}
-
-// Creating a new client and its first project.
-export interface CreateClientProfile {
-    client: SaveClient;
-    project: SaveProject;
 }

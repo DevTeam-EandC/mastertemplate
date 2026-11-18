@@ -1,3 +1,4 @@
+
 import { useEffect, type ComponentType } from "react";
 import {
     BrowserRouter,
@@ -9,11 +10,13 @@ import {
 import { useAuth } from "./auth/AuthContext";
 import RequireAuth from "./auth/RequireAuth";
 
+// Authentication Pages
 import Login from "./pages/Login/Login";
 import DashboardSelection from "./pages/DashboardSelection/DashboardSelection";
 import DashboardSection from "./pages/DashboardSection";
 import NoDashboard from "./pages/NoDashboard";
 
+// Admin Components
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import UserManagement from "./pages/Admin/UserManagement";
@@ -22,11 +25,18 @@ import DepartmentManagement from "./pages/Admin/DepartmentManagement";
 import PositionManagement from "./pages/Admin/PositionManagement";
 import EditUser from "./pages/Admin/EditUser";
 
+// Dashboard Configuration
 import { dashboardRoutes } from "./config/dashboardRoutes";
+
+// Sales - Account Manager
 import ClientProfileList from "./Dashboards/Sales/AccountManager/ClientProfileList";
-import ClientProfileForm from "./Dashboards/Sales/AccountManager/ClientProfileForm";
+import ClientProfileForm from "./Dashboards/Sales/AccountManager/customers/ClientProfileForm";
+import ClientProfileView from "./Dashboards/Sales/AccountManager/ClientProfileView";
+import ProjectList from "./Dashboards/Sales/AccountManager/ProjectList";
+// Design - Design Specialist
 import DesignClientReferences from "./Dashboards/Design/DesignSpecialist/ClientReferences";
 
+// Authorized Dashboard Component
 export function AuthorizedDashboard({
     routeKey,
     component: Dashboard,
@@ -66,25 +76,40 @@ export function AuthorizedDashboard({
     return <Dashboard />;
 }
 
+// Application Routes
 function AppRoutes() {
     return (
         <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
+            {/* ============================= */}
+            {/* PUBLIC ROUTES */}
+            {/* ============================= */}
 
-            {/* Authenticated Routes */}
+            <Route
+                path="/login"
+                element={<Login />}
+            />
+
+            {/* ============================= */}
+            {/* AUTHENTICATED ROUTES */}
+            {/* ============================= */}
+
             <Route element={<RequireAuth />}>
+                {/* Dashboard Selection */}
                 <Route
                     path="/select-dashboard"
                     element={<DashboardSelection />}
                 />
 
+                {/* No Dashboard Assigned */}
                 <Route
                     path="/no-dashboard"
                     element={<NoDashboard />}
                 />
 
-                {/* System Admin Routes: one shared layout with logout */}
+                {/* ============================= */}
+                {/* SYSTEM ADMIN ROUTES */}
+                {/* ============================= */}
+
                 <Route
                     path="/admin"
                     element={
@@ -93,16 +118,46 @@ function AppRoutes() {
                         </RequireAuth>
                     }
                 >
-                    <Route index element={<Navigate to="dashboard" replace />} />
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="users/new" element={<CreateUser />} />
-                    <Route path="users/:id/edit" element={<EditUser />} />
-                    <Route path="departments" element={<DepartmentManagement />} />
-                    <Route path="positions" element={<PositionManagement />} />
+                    <Route
+                        index
+                        element={<Navigate to="dashboard" replace />}
+                    />
+
+                    <Route
+                        path="dashboard"
+                        element={<AdminDashboard />}
+                    />
+
+                    <Route
+                        path="users"
+                        element={<UserManagement />}
+                    />
+
+                    <Route
+                        path="users/new"
+                        element={<CreateUser />}
+                    />
+
+                    <Route
+                        path="users/:id/edit"
+                        element={<EditUser />}
+                    />
+
+                    <Route
+                        path="departments"
+                        element={<DepartmentManagement />}
+                    />
+
+                    <Route
+                        path="positions"
+                        element={<PositionManagement />}
+                    />
                 </Route>
 
-                {/* Position-Specific Dashboards */}
+                {/* ============================= */}
+                {/* POSITION-SPECIFIC DASHBOARDS */}
+                {/* ============================= */}
+
                 {dashboardRoutes.map((route) => (
                     <Route
                         key={route.key}
@@ -116,34 +171,61 @@ function AppRoutes() {
                     />
                 ))}
 
-                {/* Sales: client profiles. Must sit before the generic section route. */}
+                {/* ============================= */}
+                {/* SALES - ACCOUNT MANAGER */}
+                {/* ============================= */}
+
+                {/* Customer List */}
                 <Route
                     path="/Sales/AccountManager/customers"
                     element={<ClientProfileList />}
                 />
+
+                {/* Create New Client */}
                 <Route
                     path="/Sales/AccountManager/customers/new"
                     element={<ClientProfileForm />}
                 />
+
+                {/* Edit Existing Client */}
                 <Route
                     path="/Sales/AccountManager/customers/:id/edit"
                     element={<ClientProfileForm />}
                 />
 
-                {/* Design: client references sent from Sales. */}
+                {/* View Client Profile */}
+                <Route
+                    path="/Sales/AccountManager/customers/:id"
+                    element={<ClientProfileView />}
+                />
+                <Route
+                    path="/Sales/AccountManager/projects"
+                    element={<ProjectList />}
+                />
+
+                {/* ============================= */}
+                {/* DESIGN - DESIGN SPECIALIST */}
+                {/* ============================= */}
+
                 <Route
                     path="/Design/DesignSpecialist/client-references"
                     element={<DesignClientReferences />}
                 />
 
-                {/* Dashboard Section Pages */}
+                {/* ============================= */}
+                {/* GENERIC DASHBOARD SECTION */}
+                {/* ============================= */}
+
                 <Route
                     path="/:department/:position/:page"
                     element={<DashboardSection />}
                 />
             </Route>
 
-            {/* Unknown URL */}
+            {/* ============================= */}
+            {/* UNKNOWN ROUTES */}
+            {/* ============================= */}
+
             <Route
                 path="*"
                 element={<Navigate to="/login" replace />}
@@ -152,6 +234,7 @@ function AppRoutes() {
     );
 }
 
+// Main Application
 export default function App() {
     return (
         <BrowserRouter>
