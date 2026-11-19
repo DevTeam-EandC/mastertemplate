@@ -9,6 +9,13 @@ import {
 } from "react";
 
 import api from "../api/api";
+import {
+    clearAuthSession,
+    getAuthItem,
+    isRememberedSession,
+    removeAuthItem,
+    setAuthItem,
+} from "./authStorage";
 
 import type {
     AuthContextType,
@@ -34,13 +41,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         useState<DashboardAssignment | null>(null);
 
     const [loading, setLoading] = useState(true);
+
     // Restore login information after page refresh.
     useEffect(() => {
         try {
-            const savedUser = localStorage.getItem("user");
-            const savedDashboards = localStorage.getItem("dashboards");
-            const savedActive = localStorage.getItem("activeDashboard");
-            const token = localStorage.getItem("accessToken");
+            const savedUser = getAuthItem("user");
+            const savedDashboards = getAuthItem("dashboards");
+            const savedActive = getAuthItem("activeDashboard");
+            const token = getAuthItem("accessToken");
 
             if (token && savedUser && savedDashboards) {
                 const parsedUser = JSON.parse(savedUser) as LoginUser;
@@ -66,25 +74,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     if (validDashboard) {
                         setActiveDashboard(validDashboard);
                     } else {
-                        localStorage.removeItem("activeDashboard");
+                        removeAuthItem("activeDashboard");
                     }
                 }
             }
         } catch {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("user");
-            localStorage.removeItem("dashboards");
-            localStorage.removeItem("activeDashboard");
+            clearAuthSession();
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // Login API.
+    // Login API. rememberMe chooses localStorage (kept after the browser closes)
+    // or sessionStorage (cleared when the browser closes).
     const login = useCallback(async (
         email: string,
-        password: string
+        password: string,
+        rememberMe = false
     ): Promise<LoginResponse> => {
         const response = await api.post<LoginResponse>(
             "/Auth/login",
@@ -99,21 +105,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             roles: data.roles ?? [],
         };
 
-        // Save authentication information.
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
+        // Clear any previous session from both storages before saving the new one.
+        clearAuthSession();
 
-        localStorage.setItem(
-            "user",
-            JSON.stringify(authenticatedUser)
-        );
-
-        localStorage.setItem(
-            "dashboards",
-            JSON.stringify(data.dashboards)
-        );
-
-        localStorage.removeItem("activeDashboard");
+        setAuthItem("accessToken", data.accessToken, rememberMe);
+        setAuthItem("refreshToken", data.refreshToken, rememberMe);
+        setAuthItem("user", JSON.stringify(authenticatedUser), rememberMe);
+        setAuthItem("dashboards", JSON.stringify(data.dashboards), rememberMe);
 
         setUser(authenticatedUser);
         setDashboards(data.dashboards);
@@ -136,9 +134,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 return false;
             }
 
-            localStorage.setItem(
+            // Keep the active dashboard in the same storage as the rest of the session.
+            setAuthItem(
                 "activeDashboard",
-                JSON.stringify(allowedDashboard)
+                JSON.stringify(allowedDashboard),
+                isRememberedSession()
             );
 
             setActiveDashboard(allowedDashboard);
@@ -150,11 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Logout.
     const logout = useCallback(() => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
-        localStorage.removeItem("dashboards");
-        localStorage.removeItem("activeDashboard");
+        clearAuthSession();
 
         setUser(null);
         setDashboards([]);

@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { getAuthItem } from "../auth/authStorage";
+
 const api = axios.create({
     baseURL: "https://localhost:7287/api",
     headers: {
@@ -8,7 +10,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAuthItem("accessToken");
 
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;

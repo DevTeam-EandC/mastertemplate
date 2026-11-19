@@ -4,14 +4,22 @@ import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import axios from "axios";
 
 import { useAuth } from "../../auth/AuthContext";
+import {
+    clearRememberedLogin,
+    getRememberedLogin,
+    saveRememberedLogin,
+} from "../../auth/rememberedLogin";
 
 export default function Login() {
     const navigate = useNavigate();
     const { login, switchDashboard } = useAuth();
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
+    // Read the saved login once, when the page first renders.
+    const [savedLogin] = useState(getRememberedLogin);
+    const [email, setEmail] = useState(savedLogin?.email ?? "");
+    const [password, setPassword] = useState(savedLogin?.password ?? "");
+    const [revealed, setRevealed] = useState(false);
+    const [rememberMe, setRememberMe] = useState(savedLogin !== null);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
@@ -22,7 +30,15 @@ export default function Login() {
         setSubmitting(true);
 
         try {
-            const result = await login(email, password);
+            const result = await login(email, password, rememberMe);
+
+            // Save the credentials only after a successful sign-in, and only if
+            // Remember me is checked. Unchecking it forgets them.
+            if (rememberMe) {
+                saveRememberedLogin(email, password);
+            } else {
+                clearRememberedLogin();
+            }
 
             // 1. System Admin goes directly to Admin Dashboard
             if (result.roles.includes("System Admin")) {
@@ -75,7 +91,7 @@ export default function Login() {
                     </div>
 
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-                        Company Management System
+                        Elisha and Charles Solutions, Inc.
                     </h1>
 
                     <p className="mt-1.5 text-sm text-slate-500">
@@ -118,7 +134,7 @@ export default function Login() {
                                 <input
                                     id="login-password"
                                     name="password"
-                                    type={showPassword ? "text" : "password"}
+                                    type={revealed ? "text" : "password"}
                                     autoComplete="current-password"
                                     required
                                     value={password}
@@ -129,19 +145,52 @@ export default function Login() {
 
                                 <button
                                     type="button"
-                                    onClick={() => setShowPassword((value) => !value)}
-                                    aria-label={showPassword ? "Hide password" : "Show password"}
-                                    aria-pressed={showPassword}
-                                    title={showPassword ? "Hide password" : "Show password"}
+                                    aria-label="Hold to show password"
+                                    title="Hold to show password"
+                                    onPointerDown={(e) => {
+                                        if (e.pointerType === "mouse" && e.button !== 0) return;
+                                        setRevealed(true);
+                                    }}
+                                    onPointerUp={() => setRevealed(false)}
+                                    onPointerLeave={() => setRevealed(false)}
+                                    onPointerCancel={() => setRevealed(false)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    onKeyDown={(e) => {
+                                        if ((e.key === " " || e.key === "Enter") && !e.repeat) setRevealed(true);
+                                    }}
+                                    onKeyUp={(e) => {
+                                        if (e.key === " " || e.key === "Enter") setRevealed(false);
+                                    }}
+                                    onBlur={() => setRevealed(false)}
+                                    style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }}
                                     className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300"
                                 >
-                                    {showPassword ? (
+                                    {!revealed ? (
                                         <EyeOff size={18} aria-hidden="true" />
                                     ) : (
                                         <Eye size={18} aria-hidden="true" />
                                     )}
                                 </button>
+
                             </div>
+                        </div>
+
+                        <div className="flex items-center">
+                            <label
+                                htmlFor="login-remember"
+                                className="flex cursor-pointer select-none items-center gap-2 text-sm text-slate-600"
+                            >
+                                <input
+                                    id="login-remember"
+                                    name="rememberMe"
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(event) => setRememberMe(event.target.checked)}
+                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-300"
+                                />
+                                Remember me
+                            </label>
                         </div>
 
                         {error && (

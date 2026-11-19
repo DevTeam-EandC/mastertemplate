@@ -35,7 +35,11 @@ export interface AuthContextType {
     dashboards: DashboardAssignment[];
     activeDashboard: DashboardAssignment | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<LoginResponse>;
+    login: (
+        email: string,
+        password: string,
+        rememberMe?: boolean
+    ) => Promise<LoginResponse>;
     switchDashboard: (dashboard: DashboardAssignment) => boolean;
     logout: () => void;
 }
