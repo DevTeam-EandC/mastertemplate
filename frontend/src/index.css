@@ -1,5 +1,40 @@
-
 @import "tailwindcss";
+
+/*
+  Palette from the supplied swatches:
+    #134074  primary (buttons, active nav)
+    #13315C  primary hover
+    #0B2545  ink and sidebar
+    #8DA9C4  soft accent (focus, selection, muted tints on navy)
+    #EEF4ED  canvas
+  Existing blue-* and slate-* utilities resolve to these values,
+  so every page picks up the palette without per-page class changes.
+*/
+@theme {
+    --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --color-blue-50: #f3f7fb;
+    --color-blue-100: #e3ecf5;
+    --color-blue-300: #8da9c4;
+    --color-blue-400: #6f93b5;
+    --color-blue-500: #2a5c98;
+    --color-blue-600: #134074;
+    --color-blue-700: #13315c;
+    --color-blue-800: #0f2a4c;
+    --color-blue-900: #0b2545;
+
+    --color-slate-50: #f7faf8;
+    --color-slate-100: #eef4ed;
+    --color-slate-200: #dde5ec;
+    --color-slate-300: #c3cfdb;
+    --color-slate-400: #5e7590;
+    --color-slate-500: #4a5f78;
+    --color-slate-600: #3a4d66;
+    --color-slate-700: #24364f;
+    --color-slate-800: #142a45;
+    --color-slate-900: #0b2545;
+    --color-slate-950: #0b2545;
+}
 
 * {
     box-sizing: border-box;
@@ -9,5 +44,16 @@ body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+    background: #8da9c4;
+    color: #0b2545;
+}
+
+:focus-visible {
+    outline: 2px solid #8da9c4;
+    outline-offset: 2px;
 }

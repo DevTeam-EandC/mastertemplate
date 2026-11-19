@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { ArrowLeftRight, LogOut, Menu, PanelLeft } from "lucide-react";
+import { ArrowLeftRight, Menu, PanelLeft } from "lucide-react";
 
 import DashboardSidebar, { type SidebarGroup } from "./DashboardSidebar";
 import { useAuth } from "../auth/AuthContext";
@@ -94,6 +94,7 @@ export default function DashboardShell({
                 open={navOpen}
                 collapsed={collapsed}
                 onClose={closeNav}
+                onLogout={() => void handleLogout()}
             />
 
             <div
@@ -163,15 +164,7 @@ export default function DashboardShell({
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => void handleLogout()}
-                            aria-label="Log out"
-                            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-blue-600"
-                        >
-                            <LogOut size={16} aria-hidden="true" />
-                            <span className="hidden sm:inline">Log out</span>
-                        </button>
+                        
                     </div>
                 </header>
 

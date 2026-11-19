@@ -11,6 +11,7 @@ import {
     FolderKanban,
     LayoutDashboard,
     ListChecks,
+    LogOut, 
     Megaphone,
     Monitor,
     ShieldCheck,
@@ -40,6 +41,7 @@ interface DashboardSidebarProps {
     open: boolean;
     collapsed: boolean;
     onClose: () => void;
+    onLogout: () => void;
 }
 
 const iconMap: Record<string, LucideIcon> = {
@@ -74,6 +76,7 @@ export default function DashboardSidebar({
     open,
     collapsed,
     onClose,
+    onLogout,
 }: DashboardSidebarProps) {
     const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -174,6 +177,17 @@ export default function DashboardSidebar({
                         </div>
                     ))}
                 </nav>
+                {/* Sidebar footer: Logout stays at the bottom */}
+                <div className="mt-auto border-t border-slate-800 p-3">
+                    <button
+                        type="button"
+                        onClick={onLogout}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                    >
+                        <LogOut size={18} aria-hidden="true" />
+                        <span>Log out</span>
+                    </button>
+                </div>
             </aside>
         </>
     );

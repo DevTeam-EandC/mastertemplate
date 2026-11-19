@@ -1,7 +1,6 @@
-
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { LockKeyhole, Mail } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import axios from "axios";
 
 import { useAuth } from "../../auth/AuthContext";
@@ -12,6 +11,7 @@ export default function Login() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
@@ -46,16 +46,14 @@ export default function Login() {
 
             switchDashboard(primaryDashboard);
 
-            navigate(
-                `/${primaryDashboard.dashboardKey}/dashboard`,
-                { replace: true }
-            );
-
+            navigate(`/${primaryDashboard.dashboardKey}/dashboard`, {
+                replace: true,
+            });
         } catch (err) {
             if (axios.isAxiosError(err)) {
                 setError(
                     err.response?.data?.message ??
-                    "Invalid email or password."
+                        "Invalid email or password."
                 );
             } else {
                 setError("Unable to log in. Please try again.");
@@ -65,79 +63,109 @@ export default function Login() {
         }
     };
 
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+    const inputClass =
+        "block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300";
 
-                <div className="mb-8 text-center">
-                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-600 text-white">
-                        <LockKeyhole size={28} />
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
+            <div className="w-full max-w-sm">
+                <header className="mb-8 text-center">
+                    <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
+                        <LockKeyhole size={24} aria-hidden="true" />
                     </div>
 
-                    <h1 className="text-2xl font-bold text-slate-800">
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">
                         Company Management System
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-1.5 text-sm text-slate-500">
                         Sign in to access your department dashboard.
                     </p>
-                </div>
+                </header>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">
-                            Email Address
-                        </label>
-
-                        <div className="flex items-center rounded-lg border border-slate-300 px-3">
-                            <Mail size={18} className="text-slate-400" />
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label
+                                htmlFor="login-email"
+                                className="mb-1.5 block text-sm font-medium text-slate-700"
+                            >
+                                Email Address
+                            </label>
 
                             <input
+                                id="login-email"
+                                name="email"
                                 type="email"
+                                autoComplete="username"
                                 required
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
                                 placeholder="Enter your email"
-                                className="w-full border-0 bg-transparent p-3 outline-none"
+                                className={inputClass}
                             />
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">
-                            Password
-                        </label>
+                        <div>
+                            <label
+                                htmlFor="login-password"
+                                className="mb-1.5 block text-sm font-medium text-slate-700"
+                            >
+                                Password
+                            </label>
 
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                            placeholder="Enter your password"
-                            className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-500"
-                        />
-                    </div>
+                            <div className="relative">
+                                <input
+                                    id="login-password"
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    autoComplete="current-password"
+                                    required
+                                    value={password}
+                                    onChange={(event) => setPassword(event.target.value)}
+                                    placeholder="Enter your password"
+                                    className={`${inputClass} pr-11`}
+                                />
 
-                    {error && (
-                        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                            {error}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((value) => !value)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    aria-pressed={showPassword}
+                                    title={showPassword ? "Hide password" : "Show password"}
+                                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={18} aria-hidden="true" />
+                                    ) : (
+                                        <Eye size={18} aria-hidden="true" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
-                    )}
 
-                    <button
-                        type="submit"
-                        disabled={submitting}
-                        className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {submitting ? "Signing in..." : "Sign In"}
-                    </button>
-                </form>
+                        {error && (
+                            <div
+                                role="alert"
+                                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+                            >
+                                {error}
+                            </div>
+                        )}
 
-                <p className="mt-6 text-center text-xs text-slate-400">
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {submitting ? "Signing in..." : "Sign In"}
+                        </button>
+                    </form>
+                </div>
+
+                <p className="mt-6 text-center text-xs text-slate-500">
                     Authorized company personnel only.
                 </p>
-
             </div>
         </div>
     );

@@ -44,7 +44,7 @@ export default function DashboardLayout({
             eyebrow={`${department} department`}
             heading={positionLabel}
             roleLabel={positionLabel}
-            showSwitch
+            showSwitch={dashboardKey !== "Sales/AccountManager"}  
         >
             {children}
         </DashboardShell>
