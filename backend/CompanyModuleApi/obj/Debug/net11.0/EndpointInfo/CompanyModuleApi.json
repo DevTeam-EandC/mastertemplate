@@ -2020,8 +2020,7 @@
         "required": [
           "clientName",
           "contactNumber",
-          "emailAddress",
-          "leadSource"
+          "emailAddress"
         ],
         "type": "object",
         "properties": {
@@ -2043,8 +2042,8 @@
           },
           "leadSource": {
             "maxLength": 50,
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "referralBy": {
             "maxLength": 200,

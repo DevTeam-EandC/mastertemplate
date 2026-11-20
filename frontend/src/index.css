@@ -57,3 +57,99 @@ body {
     outline: 2px solid #8da9c4;
     outline-offset: 2px;
 }
+
+/*
+  Dark theme. Turned on by the "dark" class on <html> (see src/theme/theme.ts).
+  Pages use shared light utility classes such as bg-white and text-slate-900,
+  so these scoped rules restyle them here instead of changing every page.
+  The navy sidebar keeps its own fill.
+*/
+.dark body {
+    background-color: #0a1628;
+    color: #eef4ed;
+}
+
+.dark .bg-slate-100 {
+    background-color: #0a1628;
+}
+
+.dark .bg-slate-50,
+.dark .bg-gray-50 {
+    background-color: #152c47;
+}
+
+.dark .bg-white,
+.dark .bg-white\/60,
+.dark .bg-white\/95 {
+    background-color: #112338;
+}
+
+.dark .bg-red-50 {
+    background-color: #3a1820;
+}
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+    background-color: #1b3658;
+}
+
+.dark .disabled\:bg-slate-100:disabled {
+    background-color: #152c47;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900 {
+    color: #eef4ed;
+}
+
+.dark .text-slate-700,
+.dark .text-gray-700 {
+    color: #d5e0ea;
+}
+
+.dark .text-slate-600,
+.dark .text-gray-600 {
+    color: #b4c6d8;
+}
+
+.dark .text-slate-300 {
+    color: #c9d6e3;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-gray-500 {
+    color: #8da9c4;
+}
+
+.dark .text-blue-600,
+.dark .text-blue-700 {
+    color: #8da9c4;
+}
+
+.dark .hover\:text-blue-700:hover {
+    color: #c6d6e6;
+}
+
+.dark .text-red-700 {
+    color: #fca5a5;
+}
+
+.dark .border-slate-200,
+.dark .border-gray-200 {
+    border-color: #22395a;
+}
+
+.dark .border-slate-300,
+.dark .border-gray-300 {
+    border-color: #2e4a6e;
+}
+
+.dark .border-red-200 {
+    border-color: #7f1d1d;
+}
+
+.dark ::placeholder {
+    color: #6f8aa6;
+}

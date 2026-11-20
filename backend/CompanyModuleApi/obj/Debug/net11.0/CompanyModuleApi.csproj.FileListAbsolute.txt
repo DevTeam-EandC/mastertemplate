@@ -151,3 +151,4 @@ C:\Users\Administrator\source\repos\mastertemplate\backend\CompanyModuleApi\obj\
 C:\Users\Administrator\source\repos\mastertemplate\backend\CompanyModuleApi\obj\Debug\net11.0\CompanyModuleApi.pdb
 C:\Users\Administrator\source\repos\mastertemplate\backend\CompanyModuleApi\obj\Debug\net11.0\CompanyModuleApi.genruntimeconfig.cache
 C:\Users\Administrator\source\repos\mastertemplate\backend\CompanyModuleApi\obj\Debug\net11.0\ref\CompanyModuleApi.dll
+C:\Users\Administrator\source\repos\mastertemplate\backend\CompanyModuleApi\obj\Debug\net11.0\staticwebassets.upToDateCheck.txt

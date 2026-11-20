@@ -43,7 +43,8 @@ public class SaveClientDto
     [Required, EmailAddress, MaxLength(255)]
     public string EmailAddress { get; set; } = string.Empty;
 
-    [Required, MaxLength(50)]
+    // Lead source and referral are recorded per project. Optional on the client.
+    [MaxLength(50)]
     public string LeadSource { get; set; } = string.Empty;
 
     [MaxLength(200)]

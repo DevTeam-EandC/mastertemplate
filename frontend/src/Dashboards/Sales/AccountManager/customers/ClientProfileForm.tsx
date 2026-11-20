@@ -1,4 +1,3 @@
-
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -8,61 +7,223 @@ import DashboardLayout from "../../../../components/DashboardLayout";
 import {
     createClientProfile,
     getClientProfile,
-    getClientProfileOptions,
     updateClient,
 } from "../../../../api/clientProfileApi";
 
-import type {
-    ClientProfileOptions,
-    SaveClient,
-} from "../../../../api/clientProfile.types";
+import type { SaveClient } from "../../../../api/clientProfile.types";
 
-const fieldClass =
-    "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 disabled:bg-slate-100 disabled:text-slate-500";
+import { fieldClass, inputAria } from "../formUi";
 
-const labelClass = "block text-sm font-medium text-slate-700";
+import {
+    MOBILE_DIGITS,
+    mobileDigitsError,
+    mobileDigitsKeyFilter,
+    sanitizeMobileDigits,
+    toLocalMobile,
+    AREA_CODE_MAX_LENGTH,
+    PHONE_DIGITS,
+    areaCodeError,
+    areaCodeKeyFilter,
+    phoneError,
+    phoneKeyFilter,
+    sanitizeAreaCode,
+    sanitizePhone,
+    nameError,
+    nameKeyFilter,
+    normalizeSpaces,
+    sanitizeName,
+    sanitizeSuffix,
+    suffixError,
+    suffixKeyFilter,
+    SUFFIX_MAX_LENGTH,
+} from "../../../../utils/inputRules";
 
-const emptyForm = (): SaveClient => ({
-    clientName: "",
-    contactNumber: "",
+const HONORIFICS = [
+    "Mr.",
+    "Ms.",
+    "Mrs.",
+    "Engr.",
+    "Arch.",
+    "Hon.",
+    "Dr.",
+    "Atty.",
+    "Prof.",
+];
+
+const SUFFIXES = ["Jr.", "Sr.", "III", "IV", "V"];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Client-only fields. Lead source and referral are recorded on each project.
+interface ClientFormState {
+    honorific: string;
+    lastName: string;
+    firstName: string;
+    middleName: string;
+    suffix: string;
+    mobileNumber: string; // 10 digits, without +63
+    phoneArea: string;
+    phoneNumber: string; // 7 digits, without area code
+    emailAddress: string;
+    companyName: string;
+}
+
+type FormErrors = Partial<Record<keyof ClientFormState, string>>;
+
+// Form order. Used to focus the first invalid field on submit.
+const FIELD_ORDER: (keyof ClientFormState)[] = [
+    "honorific",
+    "lastName",
+    "firstName",
+    "middleName",
+    "suffix",
+    "mobileNumber",
+    "phoneArea",
+    "phoneNumber",
+    "emailAddress",
+    "companyName",
+];
+
+const emptyForm = (): ClientFormState => ({
+    honorific: "",
+    lastName: "",
+    firstName: "",
+    middleName: "",
+    suffix: "",
+    mobileNumber: "",
+    phoneArea: "",
+    phoneNumber: "",
     emailAddress: "",
-    leadSource: "",
-    referralBy: null,
+    companyName: "",
 });
 
-function Section({
+// Matches a typed suffix to the list, ignoring case and the period.
+// "jr" becomes "Jr.". Other values are kept as typed.
+function normalizeSuffix(value: string): string {
+    const typed = value.trim();
+    const bare = typed.replace(/\.$/, "").toLowerCase();
+
+    const match = SUFFIXES.find(
+        (item) => item.replace(/\.$/, "").toLowerCase() === bare
+    );
+
+    return match ?? typed;
+}
+
+// Builds the stored name, for example "Dr. Dela Cruz, Juan Lopez, Jr."
+function composeClientName(form: ClientFormState): string {
+    const head = `${form.honorific} ${normalizeSpaces(form.lastName)}`;
+    const middle = normalizeSpaces(form.middleName);
+    const middlePart = middle ? ` ${middle}` : "";
+    const given = `${normalizeSpaces(form.firstName)}${middlePart}`;
+    const suffix = normalizeSuffix(form.suffix);
+
+    return suffix ? `${head}, ${given}, ${suffix}` : `${head}, ${given}`;
+}
+
+// Splits a stored name back into its parts. Names saved in another format
+// go into last name, and the user is asked to complete the other parts.
+function parseClientName(
+    value: string
+): Pick<
+    ClientFormState,
+    "honorific" | "lastName" | "firstName" | "middleName" | "suffix"
+> {
+    const [head = "", given = "", suffix = ""] = value.split(", ");
+    const honorific =
+        HONORIFICS.find((item) => head.startsWith(`${item} `)) ?? "";
+
+    if (!honorific) {
+        return {
+            honorific: "",
+            lastName: value,
+            firstName: "",
+            middleName: "",
+            suffix: "",
+        };
+    }
+
+    const words = given.split(" ").filter(Boolean);
+    const firstName = words.shift() ?? "";
+    const middleName = words.join(" ");
+
+    return {
+        honorific,
+        lastName: head.slice(honorific.length + 1),
+        firstName,
+        middleName,
+        suffix,
+    };
+}
+
+// Splits a stored number such as "02-1234567" into area code and 7 digits.
+function parsePhone(stored: string): Pick<
+    ClientFormState,
+    "phoneArea" | "phoneNumber"
+> {
+    const digits = stored.replace(/\D/g, "");
+
+    if (digits.length > PHONE_DIGITS) {
+        return {
+            phoneArea: digits.slice(0, digits.length - PHONE_DIGITS),
+            phoneNumber: digits.slice(-PHONE_DIGITS),
+        };
+    }
+
+    return { phoneArea: "", phoneNumber: digits };
+}
+
+/*
+ * FIELD WRAPPER
+ * Small label above the input, red asterisk when required, error or hint
+ * underneath. Local so the layout does not depend on shared form components.
+ */
+function Field({
     id,
-    title,
-    description,
+    label,
+    required,
+    error,
+    hint,
+    className = "",
     children,
 }: {
     id: string;
-    title: string;
-    description: string;
+    label: string;
+    required?: boolean;
+    error?: string;
+    hint?: string;
+    className?: string;
     children: ReactNode;
 }) {
     return (
-        <section
-            aria-labelledby={id}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7"
-        >
-            <div className="mb-6">
-                <h2
-                    id={id}
-                    className="text-base font-semibold text-slate-900"
+        <div className={className}>
+            <label
+                htmlFor={id}
+                className="mb-1.5 block text-xs font-medium text-slate-600"
+            >
+                {label}
+                {required && (
+                    <span className="ml-0.5 text-red-600" aria-hidden="true">
+                        *
+                    </span>
+                )}
+            </label>
+
+            {children}
+
+            {error ? (
+                <p
+                    id={`${id}-error`}
+                    className="mt-1.5 text-xs font-medium text-red-600"
                 >
-                    {title}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                    {description}
+                    {error}
                 </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                {children}
-            </div>
-        </section>
+            ) : hint ? (
+                <p id={`${id}-hint`} className="mt-1.5 text-xs text-slate-500">
+                    {hint}
+                </p>
+            ) : null}
+        </div>
     );
 }
 
@@ -72,13 +233,8 @@ export default function ClientProfileForm() {
 
     const isEdit = Boolean(id);
 
-    const [options, setOptions] =
-        useState<ClientProfileOptions | null>(null);
-
-    const [form, setForm] = useState<SaveClient>(emptyForm);
-
-    const [accountManagerName, setAccountManagerName] =
-        useState("");
+    const [form, setForm] = useState<ClientFormState>(emptyForm);
+    const [accountManagerName, setAccountManagerName] = useState("");
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -86,11 +242,13 @@ export default function ClientProfileForm() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    const [fieldErrors, setFieldErrors] =
-        useState<Record<string, string>>({});
+    const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+
+    // One message is shown under the telephone row, for either input.
+    const phoneFieldError = fieldErrors.phoneArea ?? fieldErrors.phoneNumber;
 
     /*
-     * LOAD OPTIONS AND EXISTING CLIENT
+     * LOAD EXISTING CLIENT (edit mode)
      */
     useEffect(() => {
         let cancelled = false;
@@ -100,38 +258,29 @@ export default function ClientProfileForm() {
                 setLoading(true);
                 setError("");
 
-                const opts = await getClientProfileOptions();
-
-                if (cancelled) return;
-
-                setOptions(opts);
-
                 if (id) {
                     const existing = await getClientProfile(id);
 
                     if (cancelled) return;
 
                     setForm({
-                        clientName: existing.clientName ?? "",
-                        contactNumber: existing.contactNumber ?? "",
+                        ...parseClientName(existing.clientName ?? ""),
+                        mobileNumber: toLocalMobile(
+                            existing.mobileNumber ?? ""
+                        ),
+                        ...parsePhone(existing.phoneNumber ?? ""),
                         emailAddress: existing.emailAddress ?? "",
-                        leadSource: existing.leadSource ?? "",
-                        referralBy: existing.referralBy ?? null,
+                        companyName: "",
                     });
 
-                    setAccountManagerName(
-                        existing.accountManagerName ?? ""
-                    );
+                    setAccountManagerName(existing.accountManagerName ?? "");
                 }
             } catch (err) {
                 console.error("Load client form error:", err);
 
                 if (cancelled) return;
 
-                if (
-                    axios.isAxiosError(err) &&
-                    err.response?.status === 403
-                ) {
+                if (axios.isAxiosError(err) && err.response?.status === 403) {
                     setError(
                         "Only Account Managers can access this client form."
                     );
@@ -141,9 +290,7 @@ export default function ClientProfileForm() {
                 ) {
                     setError("Client profile not found.");
                 } else {
-                    setError(
-                        "Unable to load the client profile form."
-                    );
+                    setError("Unable to load the client profile form.");
                 }
             } finally {
                 if (!cancelled) {
@@ -161,64 +308,73 @@ export default function ClientProfileForm() {
 
     /*
      * UPDATE FORM FIELD
+     * Clears the field's error as soon as the user edits it.
      */
-    const updateField = <K extends keyof SaveClient>(
+    const updateField = <K extends keyof ClientFormState>(
         field: K,
-        value: SaveClient[K]
+        value: ClientFormState[K]
     ) => {
         setForm((current) => ({
             ...current,
             [field]: value,
         }));
 
-        setFieldErrors((current) => ({
-            ...current,
-            [field]: "",
-        }));
+        setFieldErrors((current) => {
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
 
         setError("");
     };
 
     /*
      * VALIDATION
-     * Matches SaveClientDto data annotations.
+     * Key filters and sanitizers stop most bad input while typing. These
+     * checks cover the final value on submit.
      */
-    const validate = (data: SaveClient): Record<string, string> => {
-        const errors: Record<string, string> = {};
+    const validate = (data: ClientFormState): FormErrors => {
+        const errors: FormErrors = {};
 
-        if (!data.clientName.trim()) {
-            errors.clientName = "Enter the client name.";
-        } else if (data.clientName.trim().length > 200) {
-            errors.clientName = "Client name cannot exceed 200 characters.";
+        if (!data.honorific) {
+            errors.honorific = "Choose an honorific.";
+        } else if (!HONORIFICS.includes(data.honorific)) {
+            errors.honorific = "Choose an honorific from the list.";
         }
 
-        if (!data.contactNumber.trim()) {
-            errors.contactNumber = "Enter a contact number.";
-        } else if (data.contactNumber.trim().length > 50) {
-            errors.contactNumber =
-                "Contact number cannot exceed 50 characters.";
+        const lastNameError = nameError(data.lastName, "last");
+        if (lastNameError) errors.lastName = lastNameError;
+
+        const firstNameError = nameError(data.firstName, "first");
+        if (firstNameError) errors.firstName = firstNameError;
+
+        if (data.middleName.trim()) {
+            const middleError = nameError(data.middleName, "middle");
+            if (middleError) errors.middleName = middleError;
         }
+
+        const suffixMessage = suffixError(data.suffix);
+        if (suffixMessage) errors.suffix = suffixMessage;
+
+        const mobileMessage = mobileDigitsError(data.mobileNumber);
+        if (mobileMessage) errors.mobileNumber = mobileMessage;
+
+        const areaMessage = areaCodeError(data.phoneArea, data.phoneNumber);
+        if (areaMessage) errors.phoneArea = areaMessage;
+
+        const phoneMessage = phoneError(data.phoneArea, data.phoneNumber);
+        if (phoneMessage) errors.phoneNumber = phoneMessage;
 
         const email = data.emailAddress.trim();
 
         if (!email) {
             errors.emailAddress = "Enter an email address.";
-        } else if (
-            email.length > 255 ||
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-        ) {
+        } else if (email.length > 255 || !EMAIL_PATTERN.test(email)) {
             errors.emailAddress = "Enter a valid email address.";
         }
 
-        if (!data.leadSource) {
-            errors.leadSource = "Choose a lead source.";
-        } else if (data.leadSource.length > 50) {
-            errors.leadSource = "Lead source cannot exceed 50 characters.";
-        }
-
-        if ((data.referralBy?.trim().length ?? 0) > 200) {
-            errors.referralBy =
-                "Referral name cannot exceed 200 characters.";
+        if (data.companyName.trim().length > 200) {
+            errors.companyName = "Company name cannot exceed 200 characters.";
         }
 
         return errors;
@@ -236,17 +392,23 @@ export default function ClientProfileForm() {
         setSuccess("");
         setError("");
 
-        if (Object.keys(errors).length > 0) {
+        const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
+
+        if (firstInvalid) {
             setError("Check the highlighted fields and try again.");
+            document.getElementById(firstInvalid)?.focus();
             return;
         }
 
+        // Company name is validated but not sent yet. The API has no field
+        // for it until the backend is extended.
         const clientBody: SaveClient = {
-            clientName: form.clientName.trim(),
-            contactNumber: form.contactNumber.trim(),
+            clientName: composeClientName(form),
+            mobileNumber: `+63${form.mobileNumber}`,
+            phoneNumber: form.phoneNumber
+                ? `${form.phoneArea}-${form.phoneNumber}`
+                : "",
             emailAddress: form.emailAddress.trim(),
-            leadSource: form.leadSource,
-            referralBy: form.referralBy?.trim() || null,
         };
 
         try {
@@ -259,12 +421,9 @@ export default function ClientProfileForm() {
             } else {
                 const saved = await createClientProfile(clientBody);
 
-                setSuccess("Client profile created successfully.");
-
-                navigate(
-                    `/Sales/AccountManager/customers/${saved.id}`,
-                    { replace: true }
-                );
+                navigate(`/Sales/AccountManager/customers/${saved.id}`, {
+                    replace: true,
+                });
 
                 return;
             }
@@ -283,17 +442,13 @@ export default function ClientProfileForm() {
                     );
                 } else if (err.response?.status === 400) {
                     setError(
-                        data?.message ??
-                        "Some client information is invalid."
+                        data?.message ?? "Some client information is invalid."
                     );
                 } else if (err.response?.status === 403) {
-                    setError(
-                        "You do not have permission to save this client."
-                    );
+                    setError("You do not have permission to save this client.");
                 } else {
                     setError(
-                        data?.message ??
-                        "Unable to save the client profile."
+                        data?.message ?? "Unable to save the client profile."
                     );
                 }
             } else {
@@ -309,49 +464,57 @@ export default function ClientProfileForm() {
      */
     if (loading) {
         return (
-            <DashboardLayout
-                department="Sales"
-                position="AccountManager"
-            >
-                <p className="text-sm text-slate-500">
-                    Loading client profile...
-                </p>
+            <DashboardLayout department="Sales" position="AccountManager">
+                <div role="status" className="animate-pulse space-y-4">
+                    <div className="h-10 w-72 rounded-lg bg-slate-200" />
+                    <div className="h-72 rounded-2xl bg-slate-100" />
+                    <span className="sr-only">Loading client profile...</span>
+                </div>
             </DashboardLayout>
         );
     }
 
     return (
-        <DashboardLayout
-            department="Sales"
-            position="AccountManager"
-        >
+        <DashboardLayout department="Sales" position="AccountManager">
             {/* HEADER */}
-            <header className="mb-8">
+            <header className="mb-6 flex items-start gap-3">
                 <button
                     type="button"
-                    onClick={() =>
-                        navigate("/Sales/AccountManager/customers")
-                    }
-                    className="text-sm font-medium text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600"
+                    onClick={() => navigate("/Sales/AccountManager/customers")}
+                    aria-label="Back to client profiles"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600"
                 >
-                    ← Back to client profiles
+                    <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                    >
+                        <path d="M16 10H4M9 5l-5 5 5 5" />
+                    </svg>
                 </button>
 
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-                    {isEdit ? "Edit client profile" : "New client profile"}
-                </h1>
+                <div>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
+                        {isEdit ? "Edit client" : "Register new client"}
+                    </h1>
 
-                <p className="mt-1 text-sm text-slate-500">
-                    Register and manage client information. Projects
-                    can be added separately after saving.
-                </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Enter the client's details. You can add leads once
+                        they're registered.
+                    </p>
+                </div>
             </header>
 
             {/* ERROR */}
             {error && (
                 <div
                     role="alert"
-                    className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                    className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                 >
                     {error}
                 </div>
@@ -361,7 +524,7 @@ export default function ClientProfileForm() {
             {success && (
                 <div
                     role="status"
-                    className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                    className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
                 >
                     {success}
                 </div>
@@ -370,203 +533,328 @@ export default function ClientProfileForm() {
             <form
                 onSubmit={handleSave}
                 noValidate
-                className="space-y-6"
+                className="rounded-2xl bg-white p-6 shadow-sm md:p-8"
             >
-                {/* CLIENT INFORMATION */}
-                <Section
-                    id="client-information"
-                    title="Client information"
-                    description="Enter the client's contact and identification details."
-                >
-                    {/* CLIENT NAME */}
-                    <div>
-                        <label
-                            htmlFor="clientName"
-                            className={labelClass}
+                <div className="grid gap-x-4 gap-y-5 md:grid-cols-12">
+                    {/* ROW 1: NAME */}
+                    <Field
+                        id="honorific"
+                        label="Honorific"
+                        required
+                        error={fieldErrors.honorific}
+                        className="md:col-span-2"
+                    >
+                        <select
+                            id="honorific"
+                            className={fieldClass(Boolean(fieldErrors.honorific))}
+                            value={form.honorific}
+                            {...inputAria("honorific", fieldErrors.honorific)}
+                            onChange={(e) =>
+                                updateField("honorific", e.target.value)
+                            }
                         >
-                            Client name *
-                        </label>
+                            <option value="">Select</option>
+                            {HONORIFICS.map((item) => (
+                                <option key={item} value={item}>
+                                    {item}
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
 
+                    <Field
+                        id="lastName"
+                        label="Last name"
+                        required
+                        error={fieldErrors.lastName}
+                        className="md:col-span-3"
+                    >
                         <input
-                            id="clientName"
+                            id="lastName"
                             type="text"
-                            maxLength={200}
-                            className={fieldClass}
-                            placeholder="Enter client or company name"
-                            value={form.clientName}
-                            aria-invalid={Boolean(fieldErrors.clientName)}
-                            onChange={(e) =>
-                                updateField("clientName", e.target.value)
-                            }
-                        />
-
-                        {fieldErrors.clientName && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {fieldErrors.clientName}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* CONTACT NUMBER */}
-                    <div>
-                        <label
-                            htmlFor="contactNumber"
-                            className={labelClass}
-                        >
-                            Contact number *
-                        </label>
-
-                        <input
-                            id="contactNumber"
-                            type="tel"
                             maxLength={50}
-                            className={fieldClass}
-                            placeholder="Enter contact number"
-                            value={form.contactNumber}
-                            aria-invalid={Boolean(fieldErrors.contactNumber)}
+                            autoComplete="family-name"
+                            className={fieldClass(Boolean(fieldErrors.lastName))}
+                            placeholder="Last name"
+                            value={form.lastName}
+                            {...inputAria("lastName", fieldErrors.lastName)}
+                            onKeyDown={nameKeyFilter}
                             onChange={(e) =>
-                                updateField("contactNumber", e.target.value)
+                                updateField(
+                                    "lastName",
+                                    sanitizeName(e.target.value)
+                                )
                             }
                         />
+                    </Field>
 
-                        {fieldErrors.contactNumber && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {fieldErrors.contactNumber}
-                            </p>
-                        )}
-                    </div>
+                    <Field
+                        id="firstName"
+                        label="First name"
+                        required
+                        error={fieldErrors.firstName}
+                        className="md:col-span-3"
+                    >
+                        <input
+                            id="firstName"
+                            type="text"
+                            maxLength={50}
+                            autoComplete="given-name"
+                            className={fieldClass(Boolean(fieldErrors.firstName))}
+                            placeholder="First name"
+                            value={form.firstName}
+                            {...inputAria("firstName", fieldErrors.firstName)}
+                            onKeyDown={nameKeyFilter}
+                            onChange={(e) =>
+                                updateField(
+                                    "firstName",
+                                    sanitizeName(e.target.value)
+                                )
+                            }
+                        />
+                    </Field>
 
-                    {/* EMAIL */}
-                    <div className="md:col-span-2">
-                        <label
-                            htmlFor="emailAddress"
-                            className={labelClass}
-                        >
-                            Email address *
-                        </label>
+                    <Field
+                        id="middleName"
+                        label="Middle name"
+                        error={fieldErrors.middleName}
+                        className="md:col-span-2"
+                    >
+                        <input
+                            id="middleName"
+                            type="text"
+                            maxLength={255}
+                            autoComplete="additional-name"
+                            className={fieldClass(
+                                Boolean(fieldErrors.middleName)
+                            )}
+                            placeholder="Lopez"
+                            value={form.middleName}
+                            {...inputAria(
+                                "middleName",
+                                fieldErrors.middleName
+                            )}
+                            onKeyDown={nameKeyFilter}
+                            onChange={(e) =>
+                                updateField(
+                                    "middleName",
+                                    sanitizeName(e.target.value)
+                                )
+                            }
+                        />
+                    </Field>
 
+                    <Field
+                        id="suffix"
+                        label="Suffix"
+                        error={fieldErrors.suffix}
+                        className="md:col-span-2"
+                    >
+                        <input
+                            id="suffix"
+                            type="text"
+                            list="suffix-options"
+                            maxLength={SUFFIX_MAX_LENGTH}
+                            autoComplete="off"
+                            className={fieldClass(Boolean(fieldErrors.suffix))}
+                            placeholder="Jr."
+                            value={form.suffix}
+                            {...inputAria("suffix", fieldErrors.suffix)}
+                            onKeyDown={suffixKeyFilter}
+                            onChange={(e) =>
+                                updateField(
+                                    "suffix",
+                                    sanitizeSuffix(e.target.value)
+                                )
+                            }
+                            onBlur={(e) =>
+                                updateField(
+                                    "suffix",
+                                    normalizeSuffix(e.target.value)
+                                )
+                            }
+                        />
+                        <datalist id="suffix-options">
+                            {SUFFIXES.map((item) => (
+                                <option key={item} value={item} />
+                            ))}
+                        </datalist>
+                    </Field>
+
+                    {/* ROW 2: CONTACT AND COMPANY */}
+                    <Field
+                        id="mobileNumber"
+                        label="Mobile number"
+                        required
+                        error={fieldErrors.mobileNumber}
+                        hint="10 digits after +63"
+                        className="md:col-span-4"
+                    >
+                        <div className="relative">
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-y-0 left-0 flex select-none items-center border-r border-slate-200 px-3.5 text-[15px] font-medium text-slate-500"
+                            >
+                                +63
+                            </span>
+
+                            <input
+                                id="mobileNumber"
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel-national"
+                                // Above 10 so a pasted "+639171234567" is not
+                                // cut off before the sanitizer strips the prefix.
+                                maxLength={MOBILE_DIGITS + 4}
+                                className={fieldClass(
+                                    Boolean(fieldErrors.mobileNumber)
+                                )}
+                                style={{ paddingLeft: "4.25rem" }}
+                                placeholder="9171234567"
+                                value={form.mobileNumber}
+                                {...inputAria(
+                                    "mobileNumber",
+                                    fieldErrors.mobileNumber
+                                )}
+                                onKeyDown={mobileDigitsKeyFilter}
+                                onChange={(e) =>
+                                    updateField(
+                                        "mobileNumber",
+                                        sanitizeMobileDigits(e.target.value)
+                                    )
+                                }
+                            />
+                        </div>
+                    </Field>
+
+                    <Field
+                        id="phoneArea"
+                        label="Telephone number"
+                        error={phoneFieldError}
+                        hint="Area code and 7-digit number"
+                        className="md:col-span-4"
+                    >
+                        <div className="mt-2 flex items-center gap-2 [&_input]:mt-0">
+                            <div className="w-20 shrink-0">
+                                <input
+                                    id="phoneArea"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    autoComplete="off"
+                                    maxLength={AREA_CODE_MAX_LENGTH}
+                                    className={`${fieldClass(
+                                        Boolean(fieldErrors.phoneArea)
+                                    )} text-center`}
+                                    placeholder="02"
+                                    aria-label="Area code"
+                                    value={form.phoneArea}
+                                    {...inputAria("phoneArea", phoneFieldError)}
+                                    onKeyDown={areaCodeKeyFilter}
+                                    onChange={(e) =>
+                                        updateField("phoneArea", sanitizeAreaCode(e.target.value))
+                                    }
+                                />
+                            </div>
+
+                            <span aria-hidden="true" className="text-slate-400">
+                                -
+                            </span>
+
+                            <div className="min-w-0 flex-1">
+                                <input
+                                    id="phoneNumber"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    autoComplete="tel-national"
+                                    maxLength={PHONE_DIGITS}
+                                    className={fieldClass(Boolean(fieldErrors.phoneNumber))}
+                                    placeholder="1234567"
+                                    aria-label="Telephone number"
+                                    value={form.phoneNumber}
+                                    {...inputAria("phoneArea", phoneFieldError)}
+                                    onKeyDown={phoneKeyFilter}
+                                    onChange={(e) =>
+                                        updateField("phoneNumber", sanitizePhone(e.target.value))
+                                    }
+                                />
+                                </div>
+                            </div>
+                    </Field>
+
+                    <Field
+                        id="emailAddress"
+                        label="Email address"
+                        required
+                        error={fieldErrors.emailAddress}
+                        className="md:col-span-4"
+                    >
                         <input
                             id="emailAddress"
                             type="email"
                             maxLength={255}
-                            className={fieldClass}
+                            autoComplete="email"
+                            className={fieldClass(
+                                Boolean(fieldErrors.emailAddress)
+                            )}
                             placeholder="example@company.com"
                             value={form.emailAddress}
-                            aria-invalid={Boolean(fieldErrors.emailAddress)}
+                            {...inputAria(
+                                "emailAddress",
+                                fieldErrors.emailAddress
+                            )}
                             onChange={(e) =>
                                 updateField("emailAddress", e.target.value)
                             }
                         />
+                    </Field>
 
-                        {fieldErrors.emailAddress && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {fieldErrors.emailAddress}
-                            </p>
-                        )}
-                    </div>
-                </Section>
-
-                {/* LEAD INFORMATION */}
-                <Section
-                    id="lead-information"
-                    title="Lead information"
-                    description="Record how the client was referred to your company."
-                >
-                    {/* LEAD SOURCE */}
-                    <div>
-                        <label
-                            htmlFor="leadSource"
-                            className={labelClass}
-                        >
-                            Lead source *
-                        </label>
-
-                        <select
-                            id="leadSource"
-                            className={fieldClass}
-                            value={form.leadSource}
-                            aria-invalid={Boolean(fieldErrors.leadSource)}
-                            onChange={(e) =>
-                                updateField("leadSource", e.target.value)
-                            }
-                        >
-                            <option value="">
-                                Select a lead source
-                            </option>
-
-                            {options?.leadSources.map((source) => (
-                                <option key={source} value={source}>
-                                    {source}
-                                </option>
-                            ))}
-                        </select>
-
-                        {fieldErrors.leadSource && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {fieldErrors.leadSource}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* REFERRAL */}
-                    <div>
-                        <label
-                            htmlFor="referralBy"
-                            className={labelClass}
-                        >
-                            Referral by
-                        </label>
-
+                    <Field
+                        id="companyName"
+                        label="Company name"
+                        error={fieldErrors.companyName}
+                        className="md:col-span-4"
+                    >
                         <input
-                            id="referralBy"
+                            id="companyName"
                             type="text"
                             maxLength={200}
-                            className={fieldClass}
-                            placeholder="Enter referral name (optional)"
-                            value={form.referralBy ?? ""}
-                            aria-invalid={Boolean(fieldErrors.referralBy)}
+                            autoComplete="organization"
+                            className={fieldClass(
+                                Boolean(fieldErrors.companyName)
+                            )}
+                            placeholder="Company name (optional)"
+                            value={form.companyName}
+                            {...inputAria(
+                                "companyName",
+                                fieldErrors.companyName
+                            )}
                             onChange={(e) =>
-                                updateField(
-                                    "referralBy",
-                                    e.target.value || null
-                                )
+                                updateField("companyName", e.target.value)
                             }
                         />
+                    </Field>
 
-                        {fieldErrors.referralBy && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {fieldErrors.referralBy}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* ACCOUNT MANAGER */}
-                    <div className="md:col-span-2">
-                        <label className={labelClass}>
-                            Account Manager
-                        </label>
-
-                        <div className="mt-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-                            {accountManagerName ||
-                                "Automatically assigned from your login"}
-                        </div>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                            The logged-in Account Manager is assigned
-                            automatically by the backend.
+                    {/* ROW 3: ACCOUNT MANAGER */}
+                    <div className="md:col-span-4">
+                        <p className="mb-1.5 text-xs font-medium text-slate-600">
+                            Account manager
                         </p>
+
+                        <div className="flex h-11 items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3.5 text-[15px] text-slate-600">
+                            {accountManagerName || "Assigned from your login"}
+                        </div>
                     </div>
-                </Section>
+                </div>
 
                 {/* ACTIONS */}
-                <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur md:-mx-8 md:px-8">
+                <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
                     <button
                         type="button"
                         onClick={() =>
                             navigate("/Sales/AccountManager/customers")
                         }
                         disabled={saving}
-                        className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                     >
                         Cancel
                     </button>
@@ -574,13 +862,13 @@ export default function ClientProfileForm() {
                     <button
                         type="submit"
                         disabled={saving}
-                        className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        className="rounded-lg bg-blue-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-950 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                     >
                         {saving
                             ? "Saving..."
                             : isEdit
                                 ? "Update client"
-                                : "Save client"}
+                                : "Register client"}
                     </button>
                 </div>
             </form>

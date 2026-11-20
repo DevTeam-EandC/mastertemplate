@@ -1,4 +1,3 @@
-
 export interface ElevatorDetail {
     elevatorType: string;
     ratedCapacity: string;
@@ -9,6 +8,7 @@ export interface ElevatorDetail {
     typeOfDoor: string;
     elevatorControlSystem: string;
     shaftExisting: boolean;
+    shaftDetails: string | null;
 }
 
 export interface SalesOfficerOption {
@@ -37,7 +37,7 @@ export interface ClientLookup {
 export interface ClientProfile {
     id: string;
     clientName: string;
-    contactNumber: string;
+    mobileNumber: string;
     emailAddress: string;
     leadSource: string;
     referralBy: string | null;
@@ -53,7 +53,7 @@ export interface ProjectProfile {
     id: string;
     clientId: string;
     clientName: string;
-    contactNumber: string;
+    mobileNumber: string;
     emailAddress: string;
     leadSource: string;
     referralBy: string | null;
@@ -78,12 +78,11 @@ export interface ProjectProfile {
 }
 
 // CLIENT CREATE / UPDATE REQUEST
+// Lead source and referral are recorded per project, not per client.
 export interface SaveClient {
     clientName: string;
-    contactNumber: string;
+    mobileNumber: string;
     emailAddress: string;
-    leadSource: string;
-    referralBy: string | null;
 }
 
 // PROJECT CREATE / UPDATE REQUEST
@@ -91,6 +90,8 @@ export interface SaveProject {
     buildingType: string;
     salesOfficerUserId: string;
     quotationType: string;
+    leadSource: string;
+    referralBy: string | null;
     specialInstructions: string | null;
     numberOfElevators: number;
     elevators: ElevatorDetail[];

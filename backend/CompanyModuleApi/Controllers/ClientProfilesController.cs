@@ -283,7 +283,11 @@ public class ClientProfilesController : ControllerBase
         client.ClientName = dto.ClientName.Trim();
         client.ContactNumber = dto.ContactNumber.Trim();
         client.EmailAddress = email;
-        client.LeadSource = dto.LeadSource;
+        // Keep the stored lead source when the form does not send one.
+        if (!string.IsNullOrEmpty(dto.LeadSource))
+        {
+            client.LeadSource = dto.LeadSource;
+        }
         client.ReferralBy = dto.ReferralBy?.Trim();
         client.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -584,7 +588,9 @@ public class ClientProfilesController : ControllerBase
     // Checks the client form on the server. The client's checks can be bypassed.
     private static ActionResult? ValidateClient(SaveClientDto dto)
     {
-        if (!ClientProfileOptions.LeadSources.Contains(dto.LeadSource))
+        // Lead source is optional on the client. When sent, it must be a valid option.
+        if (!string.IsNullOrEmpty(dto.LeadSource) &&
+            !ClientProfileOptions.LeadSources.Contains(dto.LeadSource))
         {
             return new BadRequestObjectResult(new { message = "Lead source is not valid." });
         }

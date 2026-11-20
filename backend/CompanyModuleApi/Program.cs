@@ -308,8 +308,13 @@ if (app.Environment.IsDevelopment())
 // ==========================================
 // 14. MIDDLEWARE PIPELINE
 // ==========================================
-app.UseHttpsRedirection();
+// Only enforce HTTPS outside development.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
+// CORS must run before authentication and authorization.
 app.UseCors("ReactPolicy");
 
 app.UseAuthentication();

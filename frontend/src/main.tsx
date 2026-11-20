@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
+import "./theme/theme";
 import "./index.css";
 
 ReactDOM.createRoot(

@@ -4,6 +4,7 @@ import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import axios from "axios";
 
 import { useAuth } from "../../auth/AuthContext";
+import ThemeToggle from "../../components/ThemeToggle";
 import {
     clearRememberedLogin,
     getRememberedLogin,
@@ -69,7 +70,7 @@ export default function Login() {
             if (axios.isAxiosError(err)) {
                 setError(
                     err.response?.data?.message ??
-                        "Invalid email or password."
+                    "Invalid email or password."
                 );
             } else {
                 setError("Unable to log in. Please try again.");
@@ -85,6 +86,10 @@ export default function Login() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
             <div className="w-full max-w-sm">
+                <div className="mb-4 flex justify-end">
+                    <ThemeToggle />
+                </div>
+
                 <header className="mb-8 text-center">
                     <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
                         <LockKeyhole size={24} aria-hidden="true" />

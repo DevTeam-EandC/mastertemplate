@@ -33,6 +33,7 @@ import ClientProfileList from "./Dashboards/Sales/AccountManager/ClientProfileLi
 import ClientProfileForm from "./Dashboards/Sales/AccountManager/customers/ClientProfileForm";
 import ClientProfileView from "./Dashboards/Sales/AccountManager/ClientProfileView";
 import ProjectList from "./Dashboards/Sales/AccountManager/ProjectList";
+import ProjectDetailsForm from "./Dashboards/Sales/AccountManager/projects/ProjectDetailsForm";
 // Design - Design Specialist
 import DesignClientReferences from "./Dashboards/Design/DesignSpecialist/ClientReferences";
 
@@ -201,6 +202,12 @@ function AppRoutes() {
                 <Route
                     path="/Sales/AccountManager/projects"
                     element={<ProjectList />}
+                />
+
+                {/* Add a project to a client */}
+                <Route
+                    path="/Sales/AccountManager/projects/new/:clientId"
+                    element={<ProjectDetailsForm />}
                 />
 
                 {/* ============================= */}

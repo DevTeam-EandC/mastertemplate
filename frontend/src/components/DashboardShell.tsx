@@ -5,6 +5,7 @@ import { ArrowLeftRight, Menu, PanelLeft } from "lucide-react";
 import DashboardSidebar, { type SidebarGroup } from "./DashboardSidebar";
 import { useAuth } from "../auth/AuthContext";
 import { revokeRefreshToken } from "../auth/signOut";
+import ThemeToggle from "./ThemeToggle";
 
 const SIDEBAR_STORAGE_KEY = "sidebarCollapsed";
 
@@ -137,6 +138,8 @@ export default function DashboardShell({
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3">
+                        <ThemeToggle />
+
                         {showSwitch && (
                             <NavLink
                                 to="/select-dashboard"
